@@ -1,0 +1,599 @@
+<html>
+    <head>
+        <meta charset="utf-8">
+        
+            <script>function neighbourhoodHighlight(params) {
+  // console.log("in nieghbourhoodhighlight");
+  allNodes = nodes.get({ returnType: "Object" });
+  // originalNodes = JSON.parse(JSON.stringify(allNodes));
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    highlightActive = true;
+    var i, j;
+    var selectedNode = params.nodes[0];
+    var degrees = 2;
+
+    // mark all nodes as hard to read.
+    for (let nodeId in allNodes) {
+      // nodeColors[nodeId] = allNodes[nodeId].color;
+      allNodes[nodeId].color = "rgba(200,200,200,0.5)";
+      if (allNodes[nodeId].hiddenLabel === undefined) {
+        allNodes[nodeId].hiddenLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+    var connectedNodes = network.getConnectedNodes(selectedNode);
+    var allConnectedNodes = [];
+
+    // get the second degree nodes
+    for (i = 1; i < degrees; i++) {
+      for (j = 0; j < connectedNodes.length; j++) {
+        allConnectedNodes = allConnectedNodes.concat(
+          network.getConnectedNodes(connectedNodes[j])
+        );
+      }
+    }
+
+    // all second degree nodes get a different color and their label back
+    for (i = 0; i < allConnectedNodes.length; i++) {
+      // allNodes[allConnectedNodes[i]].color = "pink";
+      allNodes[allConnectedNodes[i]].color = "rgba(150,150,150,0.75)";
+      if (allNodes[allConnectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[allConnectedNodes[i]].label =
+          allNodes[allConnectedNodes[i]].hiddenLabel;
+        allNodes[allConnectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // all first degree nodes get their own color and their label back
+    for (i = 0; i < connectedNodes.length; i++) {
+      // allNodes[connectedNodes[i]].color = undefined;
+      allNodes[connectedNodes[i]].color = nodeColors[connectedNodes[i]];
+      if (allNodes[connectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[connectedNodes[i]].label =
+          allNodes[connectedNodes[i]].hiddenLabel;
+        allNodes[connectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // the main node gets its own color and its label back.
+    // allNodes[selectedNode].color = undefined;
+    allNodes[selectedNode].color = nodeColors[selectedNode];
+    if (allNodes[selectedNode].hiddenLabel !== undefined) {
+      allNodes[selectedNode].label = allNodes[selectedNode].hiddenLabel;
+      allNodes[selectedNode].hiddenLabel = undefined;
+    }
+  } else if (highlightActive === true) {
+    // console.log("highlightActive was true");
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      // allNodes[nodeId].color = "purple";
+      allNodes[nodeId].color = nodeColors[nodeId];
+      // delete allNodes[nodeId].color;
+      if (allNodes[nodeId].hiddenLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].hiddenLabel;
+        allNodes[nodeId].hiddenLabel = undefined;
+      }
+    }
+    highlightActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    // console.log("Nothing was selected");
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        // allNodes[nodeId].color = {};
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function filterHighlight(params) {
+  allNodes = nodes.get({ returnType: "Object" });
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    filterActive = true;
+    let selectedNodes = params.nodes;
+
+    // hiding all nodes and saving the label
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = true;
+      if (allNodes[nodeId].savedLabel === undefined) {
+        allNodes[nodeId].savedLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+
+    for (let i=0; i < selectedNodes.length; i++) {
+      allNodes[selectedNodes[i]].hidden = false;
+      if (allNodes[selectedNodes[i]].savedLabel !== undefined) {
+        allNodes[selectedNodes[i]].label = allNodes[selectedNodes[i]].savedLabel;
+        allNodes[selectedNodes[i]].savedLabel = undefined;
+      }
+    }
+
+  } else if (filterActive === true) {
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = false;
+      if (allNodes[nodeId].savedLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].savedLabel;
+        allNodes[nodeId].savedLabel = undefined;
+      }
+    }
+    filterActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function selectNode(nodes) {
+  network.selectNodes(nodes);
+  neighbourhoodHighlight({ nodes: nodes });
+  return nodes;
+}
+
+function selectNodes(nodes) {
+  network.selectNodes(nodes);
+  filterHighlight({nodes: nodes});
+  return nodes;
+}
+
+function highlightFilter(filter) {
+  let selectedNodes = []
+  let selectedProp = filter['property']
+  if (filter['item'] === 'node') {
+    let allNodes = nodes.get({ returnType: "Object" });
+    for (let nodeId in allNodes) {
+      if (allNodes[nodeId][selectedProp] && filter['value'].includes((allNodes[nodeId][selectedProp]).toString())) {
+        selectedNodes.push(nodeId)
+      }
+    }
+  }
+  else if (filter['item'] === 'edge'){
+    let allEdges = edges.get({returnType: 'object'});
+    // check if the selected property exists for selected edge and select the nodes connected to the edge
+    for (let edge in allEdges) {
+      if (allEdges[edge][selectedProp] && filter['value'].includes((allEdges[edge][selectedProp]).toString())) {
+        selectedNodes.push(allEdges[edge]['from'])
+        selectedNodes.push(allEdges[edge]['to'])
+      }
+    }
+  }
+  selectNodes(selectedNodes)
+}</script>
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/dist/vis-network.min.css" integrity="sha512-WgxfT5LWjfszlPHXRmBWHkV2eceiWTOBvrKCNbdgDYTHrT2AeLCGbF4sZlZw3UMN3WtL0tGUoIAKsu8mllg/XA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/vis-network.min.js" integrity="sha512-LnvoEWDFrqGHlHmDD2101OrLcbsfkrzoSpvtSQtxK3RMnRV0eOkhhBN2dXHKRrUU8p2DGRTk35n4O8nWSVe1mQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+            
+            
+            
+            
+            
+            
+                <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tom-select/2.0.0-rc.4/css/tom-select.min.css" integrity="sha512-43fHB3GLgZfz8QXl1RPQ8O66oIgv3po9cJ5erMt1c4QISq9dYb195T3vr5ImnJPXuVroKcGBPXBFKETW8jrPNQ==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+                <script src="https://cdnjs.cloudflare.com/ajax/libs/tom-select/2.0.0-rc.4/js/tom-select.complete.js" integrity="sha512-jeF9CfnvzDiw9G9xiksVjxR2lib44Gnovvkv+3CgCG6NXCD4gqlA5nDAVW5WjpA+i+/zKsUWV5xNEbW1X/HH0Q==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+            
+
+        
+<center>
+<h1></h1>
+</center>
+
+<!-- <link rel="stylesheet" href="../node_modules/vis/dist/vis.min.css" type="text/css" />
+<script type="text/javascript" src="../node_modules/vis/dist/vis.js"> </script>-->
+        <link
+          href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/css/bootstrap.min.css"
+          rel="stylesheet"
+          integrity="sha384-eOJMYsd53ii+scO/bJGFsiCZc+5NDVN2yr8+0RDqr0Ql0h+rP48ckxlpbzKgwra6"
+          crossorigin="anonymous"
+        />
+        <script
+          src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/js/bootstrap.bundle.min.js"
+          integrity="sha384-JEW9xMcG8R+pH31jmWH6WWP0WintQrMb4s7ZOdauHnUtxwoG2vI5DkLtS3qm9Ekf"
+          crossorigin="anonymous"
+        ></script>
+
+
+        <center>
+          <h1></h1>
+        </center>
+        <style type="text/css">
+
+             #mynetwork {
+                 width: 100%;
+                 height: 600px;
+                 background-color: #ffffff;
+                 border: 1px solid lightgray;
+                 position: relative;
+                 float: left;
+             }
+
+             
+             #loadingBar {
+                 position:absolute;
+                 top:0px;
+                 left:0px;
+                 width: 100%;
+                 height: 600px;
+                 background-color:rgba(200,200,200,0.8);
+                 -webkit-transition: all 0.5s ease;
+                 -moz-transition: all 0.5s ease;
+                 -ms-transition: all 0.5s ease;
+                 -o-transition: all 0.5s ease;
+                 transition: all 0.5s ease;
+                 opacity:1;
+             }
+
+             #bar {
+                 position:absolute;
+                 top:0px;
+                 left:0px;
+                 width:20px;
+                 height:20px;
+                 margin:auto auto auto auto;
+                 border-radius:11px;
+                 border:2px solid rgba(30,30,30,0.05);
+                 background: rgb(0, 173, 246); /* Old browsers */
+                 box-shadow: 2px 0px 4px rgba(0,0,0,0.4);
+             }
+
+             #border {
+                 position:absolute;
+                 top:10px;
+                 left:10px;
+                 width:500px;
+                 height:23px;
+                 margin:auto auto auto auto;
+                 box-shadow: 0px 0px 4px rgba(0,0,0,0.2);
+                 border-radius:10px;
+             }
+
+             #text {
+                 position:absolute;
+                 top:8px;
+                 left:530px;
+                 width:30px;
+                 height:50px;
+                 margin:auto auto auto auto;
+                 font-size:22px;
+                 color: #000000;
+             }
+
+             div.outerBorder {
+                 position:relative;
+                 top:400px;
+                 width:600px;
+                 height:44px;
+                 margin:auto auto auto auto;
+                 border:8px solid rgba(0,0,0,0.1);
+                 background: rgb(252,252,252); /* Old browsers */
+                 background: -moz-linear-gradient(top,  rgba(252,252,252,1) 0%, rgba(237,237,237,1) 100%); /* FF3.6+ */
+                 background: -webkit-gradient(linear, left top, left bottom, color-stop(0%,rgba(252,252,252,1)), color-stop(100%,rgba(237,237,237,1))); /* Chrome,Safari4+ */
+                 background: -webkit-linear-gradient(top,  rgba(252,252,252,1) 0%,rgba(237,237,237,1) 100%); /* Chrome10+,Safari5.1+ */
+                 background: -o-linear-gradient(top,  rgba(252,252,252,1) 0%,rgba(237,237,237,1) 100%); /* Opera 11.10+ */
+                 background: -ms-linear-gradient(top,  rgba(252,252,252,1) 0%,rgba(237,237,237,1) 100%); /* IE10+ */
+                 background: linear-gradient(to bottom,  rgba(252,252,252,1) 0%,rgba(237,237,237,1) 100%); /* W3C */
+                 filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#fcfcfc', endColorstr='#ededed',GradientType=0 ); /* IE6-9 */
+                 border-radius:72px;
+                 box-shadow: 0px 0px 10px rgba(0,0,0,0.2);
+             }
+             
+
+             
+             #config {
+                 float: left;
+                 width: 400px;
+                 height: 600px;
+             }
+             
+
+             
+        </style>
+    </head>
+
+
+    <body>
+        <div class="card" style="width: 100%">
+            
+            
+              <div id="filter-menu" class="card-header">
+                <div class="row no-gutters">
+                  <div class="col-3 pb-2">
+                    <select
+                            class="form-select"
+                            aria-label="Default select example"
+                            onchange="updateFilter(value, 'item')"
+                            id="select-item"
+                        >
+                        <option value="">Select a network item</option>
+                        <option value="edge">edge</option>
+                        <option value="node">node</option>
+                    </select>
+                  </div>
+                  <div class="col-3 pb-2">
+                    <select
+                            class="form-select"
+                            aria-label="Default select example"
+                            onchange="updateFilter(value, 'property')"
+                            id="select-property"
+                        >
+                        <option value="">Select a property...</option>
+                    </select>
+                  </div>
+                  <div class="col-3 pb-2">
+                    <select
+                            class="form-select"
+                            aria-label="Default select example"
+                            id="select-value"
+                        >
+                        <option value="">Select value(s)...</option>
+                    </select>
+                  </div>
+                  <div class="col-1 pb-2">
+                    <button type="button" class="btn btn-primary btn-block" onclick="highlightFilter(filter);">Filter</button>
+                  </div>
+                  <div class="col-2 pb-2">
+                    <button type="button" class="btn btn-primary btn-block" onclick="clearFilter(true)">Reset Selection</button>
+                  </div>
+                </div>
+              </div>
+            
+            <div id="mynetwork" class="card-body"></div>
+        </div>
+
+        
+            <div id="loadingBar">
+              <div class="outerBorder">
+                <div id="text">0%</div>
+                <div id="border">
+                  <div id="bar"></div>
+                </div>
+              </div>
+            </div>
+        
+        
+            <div id="config"></div>
+        
+
+        <script type="text/javascript">
+
+              // initialize global variables.
+              var edges;
+              var nodes;
+              var allNodes;
+              var allEdges;
+              var nodeColors;
+              var originalNodes;
+              var network;
+              var container;
+              var options, data;
+              var filter = {
+                  item : '',
+                  property : '',
+                  value : []
+              };
+
+              
+
+              
+                  // explicitly using onItemAdd and this function as we need to save multiple values
+                  let updateValueFilter = function() {
+                      return function () {
+                      filter['value'].push(arguments[0])
+                      }
+                  }
+
+                  let valueControl = new TomSelect("#select-value",{
+                      maxItems: null,
+                      valueField: 'id',
+                      labelField: 'title',
+                      searchField: 'title',
+                      create: false,
+                      sortField: {
+                          field: "text",
+                          direction: "asc"
+                      },
+                      onItemAdd: updateValueFilter()
+                  });
+
+                  let addValues = function() {
+                      return function () {
+                          // clear the current value options and add the selected attribute values
+                          // tom-select handles duplicates
+                          let selectedProperty = arguments[0];
+                          valueControl.clear();
+                          valueControl.clearOptions();
+                          filter['value'] = []
+                          if (filter['item'] === 'node') {
+                              for (let each in allNodes) {
+                                  valueControl.addOption({
+                                      id:allNodes[each][selectedProperty],
+                                      title:allNodes[each][selectedProperty]
+                                  })
+                              }
+                          }
+                          else if (filter['item'] === 'edge') {
+                              for (let each in allEdges) {
+                                  valueControl.addOption({
+                                      id:allEdges[each][selectedProperty],
+                                      title:allEdges[each][selectedProperty]
+                                  })
+                              }
+                          }
+                      }
+                  };
+
+                  let propControl = new TomSelect("#select-property",{
+                      valueField: 'id',
+                      labelField: 'title',
+                      searchField: 'title',
+                      create: false,
+                      sortField: {
+                          field: "text",
+                          direction: "asc"
+                      },
+                      onItemAdd: addValues()
+                  });
+
+                  let addProperties = function() {
+                      return function () {
+                          // loops through the selected network item and adds the attributes to dropdown
+                          // tom-select handles duplicates
+                          clearFilter(false)
+                          if (arguments[0] === 'edge') {
+                              for (let each in allEdges) {
+                                  if (allEdges.hasOwnProperty(each)) {
+                                      for (let eachProp in allEdges[each]) {
+                                          if (allEdges[each].hasOwnProperty(eachProp)) {
+                                              propControl.addOption({id: eachProp, title: eachProp})
+                                          }
+                                      }
+                                  }
+                              }
+                          }
+                          else if (arguments[0] === 'node') {
+                              for (let each in allNodes) {
+                                  if (allNodes.hasOwnProperty(each)) {
+                                      for (let eachProp in allNodes[each]) {
+                                          if (allNodes[each].hasOwnProperty(eachProp)
+                                              && (eachProp !== 'hidden' && eachProp !== 'savedLabel'
+                                                  && eachProp !== 'hiddenLabel')) {
+                                              propControl.addOption({id: eachProp, title: eachProp})
+
+                                          }
+                                      }
+                                  }
+                              }
+                          }
+                      }
+                  };
+
+                  let itemControl = new TomSelect("#select-item",{
+                      create: false,
+                      sortField:{
+                          field: "text",
+                          direction: "asc"
+                      },
+                      onItemAdd: addProperties()
+                  });
+
+                  function clearFilter(reset) {
+                      // utility function to clear all the selected filter options
+                      // if reset is set to true, the existing filter will be removed
+                      // else, only the dropdown options are cleared
+                      propControl.clear();
+                      propControl.clearOptions();
+                      valueControl.clear();
+                      valueControl.clearOptions();
+                      filter = {
+                          item : '',
+                          property : '',
+                          value : []
+                      }
+                      if (reset) {
+                          itemControl.clear();
+                          filterHighlight({nodes: []})
+                      }
+                  }
+
+                  function updateFilter(value, key) {
+                      // key could be 'item' or 'property' and value is as selected in dropdown
+                      filter[key] = value
+                  }
+
+              
+
+              // This method is responsible for drawing the graph, returns the drawn network
+              function drawGraph() {
+                  var container = document.getElementById('mynetwork');
+
+                  
+
+                  // parsing and collecting nodes and edges from the python
+                  nodes = new vis.DataSet([{"color": "#97c2fc", "id": "Velerad", "label": "Velerad", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Geralt", "label": "Geralt", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Ostrit", "label": "Ostrit", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Foltest", "label": "Foltest", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Adda", "label": "Adda", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Nenneke", "label": "Nenneke", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Iola", "label": "Iola", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Roach", "label": "Roach", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Two", "label": "Two", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Nivellen", "label": "Nivellen", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Fenne", "label": "Fenne", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Asse", "label": "Asse", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Vereena", "label": "Vereena", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Hereward", "label": "Hereward", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Falwick", "label": "Falwick", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Caldemeyn", "label": "Caldemeyn", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Stregobor", "label": "Stregobor", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Eltibald", "label": "Eltibald", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Fredefalk", "label": "Fredefalk", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Nohorn", "label": "Nohorn", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Renfri", "label": "Renfri", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Libushe", "label": "Libushe", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Audoen", "label": "Audoen", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Civril", "label": "Civril", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Haxo", "label": "Haxo", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Calanthe", "label": "Calanthe", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Rainfarn", "label": "Rainfarn", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Drogodar", "label": "Drogodar", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Draig", "label": "Draig", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Vissegerd", "label": "Vissegerd", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Crach", "label": "Crach", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Eist", "label": "Eist", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Mousesack", "label": "Mousesack", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Roegner", "label": "Roegner", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Pavetta", "label": "Pavetta", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Nettly", "label": "Nettly", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Dhun", "label": "Dhun", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Lille", "label": "Lille", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Little", "label": "Little", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Galarr", "label": "Galarr", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Torque", "label": "Torque", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Aen", "label": "Aen", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Vanadain", "label": "Vanadain", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Toruviel", "label": "Toruviel", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Filavandrel", "label": "Filavandrel", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Yennefer", "label": "Yennefer", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "King", "label": "King", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Chireadan", "label": "Chireadan", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Errdil", "label": "Errdil", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Vratimir", "label": "Vratimir", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Beau", "label": "Beau", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Triss", "label": "Triss", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Sir", "label": "Sir", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Laurelnose", "label": "Laurelnose", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Neville", "label": "Neville", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Eskel", "label": "Eskel", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Vesemir", "label": "Vesemir", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Dennis", "label": "Dennis", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Count", "label": "Count", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Istredd", "label": "Istredd", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Herbolth", "label": "Herbolth", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Seven", "label": "Seven", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Vespula", "label": "Vespula", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Dandelion", "label": "Dandelion", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Gar", "label": "Gar", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Dudu", "label": "Dudu", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Vimme", "label": "Vimme", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Sword", "label": "Sword", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Agloval", "label": "Agloval", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Teleri", "label": "Teleri", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Essi", "label": "Essi", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Duke", "label": "Duke", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Zelest", "label": "Zelest", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Braenn", "label": "Braenn", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Freixenet", "label": "Freixenet", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Eithn\u00e9", "label": "Eithn\u00e9", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Ciri", "label": "Ciri", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Venzlav", "label": "Venzlav", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Yurga", "label": "Yurga", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Visenna", "label": "Visenna", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Baron", "label": "Baron", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Rience", "label": "Rience", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Lambert", "label": "Lambert", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Ori", "label": "Ori", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Vanielle", "label": "Vanielle", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Forest", "label": "Forest", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Yarpen", "label": "Yarpen", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Everett", "label": "Everett", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Philippa", "label": "Philippa", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Shani", "label": "Shani", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Tissaia", "label": "Tissaia", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Jarre", "label": "Jarre", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Codringher", "label": "Codringher", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Akerspaark", "label": "Akerspaark", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Ithlinne", "label": "Ithlinne", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Sabrina", "label": "Sabrina", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Esterad", "label": "Esterad", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Vilgefortz", "label": "Vilgefortz", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Francesca", "label": "Francesca", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Marti", "label": "Marti", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Dorregaray", "label": "Dorregaray", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Lydia", "label": "Lydia", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Falka", "label": "Falka", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Artaud", "label": "Artaud", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Keira", "label": "Keira", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Emhyr", "label": "Emhyr", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Fauve", "label": "Fauve", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Menno", "label": "Menno", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Milva", "label": "Milva", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Maria", "label": "Maria", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Zoltan", "label": "Zoltan", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Figgis", "label": "Figgis", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Percival", "label": "Percival", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Munro", "label": "Munro", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Field", "label": "Field", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Cahir", "label": "Cahir", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Emiel", "label": "Emiel", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Kayleigh", "label": "Kayleigh", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Aubry", "label": "Aubry", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Fringilla", "label": "Fringilla", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Blue", "label": "Blue", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Ethain", "label": "Ethain", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Dyffryn", "label": "Dyffryn", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Meve", "label": "Meve", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Vysogota", "label": "Vysogota", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Golan", "label": "Golan", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Julia", "label": "Julia", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Anna", "label": "Anna", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Mistle", "label": "Mistle", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Nimue", "label": "Nimue", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Reynart", "label": "Reynart", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Reynard", "label": "Reynard", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Palmerin", "label": "Palmerin", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Jan", "label": "Jan", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Guy", "label": "Guy", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Auberon", "label": "Auberon", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Kelpie", "label": "Kelpie", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Margarita", "label": "Margarita", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Henselt", "label": "Henselt", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Aplegatt", "label": "Aplegatt", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Demavend", "label": "Demavend", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Molnar", "label": "Molnar", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Bronibor", "label": "Bronibor", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Daniel", "label": "Daniel", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Adam", "label": "Adam", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Shilard", "label": "Shilard", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Vattier", "label": "Vattier", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Donimir", "label": "Donimir", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Fabio", "label": "Fabio", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Connor", "label": "Connor", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Barclay", "label": "Barclay", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Lucienne", "label": "Lucienne", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Fifteen", "label": "Fifteen", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Rayla", "label": "Rayla", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Assire", "label": "Assire", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Adalia", "label": "Adalia", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Ida", "label": "Ida", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Sigrdrifa", "label": "Sigrdrifa", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Hjalmar", "label": "Hjalmar", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Stefan", "label": "Stefan", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Ardal", "label": "Ardal", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Joachim", "label": "Joachim", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Leo", "label": "Leo", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Alzur", "label": "Alzur", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Milo", "label": "Milo", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Yaevinn", "label": "Yaevinn", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Tavik", "label": "Tavik", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Radovid", "label": "Radovid", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Stella", "label": "Stella", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Morvran", "label": "Morvran", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Kobus", "label": "Kobus", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Sheldon", "label": "Sheldon", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Windsor", "label": "Windsor", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Stavro", "label": "Stavro", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Puttkammer", "label": "Puttkammer", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Ambassador", "label": "Ambassador", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Ravix", "label": "Ravix", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Windhalm", "label": "Windhalm", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Cyrus", "label": "Cyrus", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Rumplestelt", "label": "Rumplestelt", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Paulie", "label": "Paulie", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Zuleyka", "label": "Zuleyka", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Merlin", "label": "Merlin", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Arthur", "label": "Arthur", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Horm", "label": "Horm", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Ihuarraquax", "label": "Ihuarraquax", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Rudiger", "label": "Rudiger", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Eredin", "label": "Eredin", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Ramon", "label": "Ramon", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Sievers", "label": "Sievers", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Bran", "label": "Bran", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Brouver", "label": "Brouver", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Albrich", "label": "Albrich", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Lebioda", "label": "Lebioda", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Lytta", "label": "Lytta", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Zyvik", "label": "Zyvik", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Elan", "label": "Elan", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Veverka", "label": "Veverka", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Riordain", "label": "Riordain", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Eudora", "label": "Eudora", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Carduin", "label": "Carduin", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Yannick", "label": "Yannick", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Aelirenn", "label": "Aelirenn", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Regan", "label": "Regan", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Iskra", "label": "Iskra", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Ekkehard", "label": "Ekkehard", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Ceallach", "label": "Ceallach", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Xavier", "label": "Xavier", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Sheala", "label": "Sheala", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Sigismund", "label": "Sigismund", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Xarthisius", "label": "Xarthisius", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Fergus", "label": "Fergus", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Braathens", "label": "Braathens", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Leticia", "label": "Leticia", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Milton", "label": "Milton", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Joanna", "label": "Joanna", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Jacob", "label": "Jacob", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Voymir", "label": "Voymir", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Isengrim", "label": "Isengrim", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Carthia", "label": "Carthia", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Aillil", "label": "Aillil", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Vreemde", "label": "Vreemde", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Morteisen", "label": "Morteisen", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Fulko", "label": "Fulko", "shape": "dot", "size": 10}]);
+                  edges = new vis.DataSet([{"book": 1, "from": "Velerad", "to": "Geralt", "width": 1}, {"book": 1, "from": "Velerad", "to": "Ostrit", "width": 1}, {"book": 1, "from": "Velerad", "to": "Foltest", "width": 1}, {"book": 5, "from": "Geralt", "to": "Foltest", "width": 1}, {"book": 1, "from": "Geralt", "to": "Adda", "width": 1}, {"book": 1, "from": "Geralt", "to": "Ostrit", "width": 1}, {"book": 7, "from": "Geralt", "to": "Nenneke", "width": 1}, {"book": 3, "from": "Geralt", "to": "Iola", "width": 1}, {"book": 7, "from": "Geralt", "to": "Roach", "width": 1}, {"book": 7, "from": "Geralt", "to": "Two", "width": 1}, {"book": 1, "from": "Geralt", "to": "Nivellen", "width": 1}, {"book": 1, "from": "Geralt", "to": "Fenne", "width": 1}, {"book": 1, "from": "Geralt", "to": "Asse", "width": 1}, {"book": 1, "from": "Geralt", "to": "Vereena", "width": 1}, {"book": 1, "from": "Geralt", "to": "Hereward", "width": 1}, {"book": 1, "from": "Geralt", "to": "Falwick", "width": 1}, {"book": 1, "from": "Geralt", "to": "Caldemeyn", "width": 1}, {"book": 1, "from": "Geralt", "to": "Stregobor", "width": 1}, {"book": 1, "from": "Geralt", "to": "Eltibald", "width": 1}, {"book": 1, "from": "Geralt", "to": "Fredefalk", "width": 1}, {"book": 1, "from": "Geralt", "to": "Nohorn", "width": 1}, {"book": 1, "from": "Geralt", "to": "Renfri", "width": 1}, {"book": 1, "from": "Geralt", "to": "Libushe", "width": 1}, {"book": 1, "from": "Geralt", "to": "Audoen", "width": 1}, {"book": 1, "from": "Geralt", "to": "Civril", "width": 1}, {"book": 1, "from": "Geralt", "to": "Haxo", "width": 1}, {"book": 7, "from": "Geralt", "to": "Calanthe", "width": 1}, {"book": 1, "from": "Geralt", "to": "Rainfarn", "width": 1}, {"book": 1, "from": "Geralt", "to": "Drogodar", "width": 1}, {"book": 1, "from": "Geralt", "to": "Draig", "width": 1}, {"book": 6, "from": "Geralt", "to": "Vissegerd", "width": 1}, {"book": 6, "from": "Geralt", "to": "Crach", "width": 1}, {"book": 1, "from": "Geralt", "to": "Eist", "width": 1}, {"book": 2, "from": "Geralt", "to": "Mousesack", "width": 1}, {"book": 4, "from": "Geralt", "to": "Roegner", "width": 1}, {"book": 7, "from": "Geralt", "to": "Pavetta", "width": 1}, {"book": 1, "from": "Geralt", "to": "Nettly", "width": 1}, {"book": 1, "from": "Geralt", "to": "Dhun", "width": 1}, {"book": 1, "from": "Geralt", "to": "Lille", "width": 1}, {"book": 2, "from": "Geralt", "to": "Little", "width": 1}, {"book": 1, "from": "Geralt", "to": "Galarr", "width": 1}, {"book": 1, "from": "Geralt", "to": "Torque", "width": 1}, {"book": 6, "from": "Geralt", "to": "Aen", "width": 1}, {"book": 1, "from": "Geralt", "to": "Vanadain", "width": 1}, {"book": 1, "from": "Geralt", "to": "Toruviel", "width": 1}, {"book": 1, "from": "Geralt", "to": "Filavandrel", "width": 1}, {"book": 7, "from": "Geralt", "to": "Yennefer", "width": 1}, {"book": 7, "from": "Geralt", "to": "King", "width": 1}, {"book": 1, "from": "Geralt", "to": "Chireadan", "width": 1}, {"book": 1, "from": "Geralt", "to": "Errdil", "width": 1}, {"book": 1, "from": "Geralt", "to": "Vratimir", "width": 1}, {"book": 7, "from": "Geralt", "to": "Beau", "width": 1}, {"book": 7, "from": "Geralt", "to": "Triss", "width": 1}, {"book": 7, "from": "Geralt", "to": "Sir", "width": 1}, {"book": 1, "from": "Geralt", "to": "Laurelnose", "width": 1}, {"book": 1, "from": "Geralt", "to": "Neville", "width": 1}, {"book": 7, "from": "Geralt", "to": "Eskel", "width": 1}, {"book": 7, "from": "Geralt", "to": "Vesemir", "width": 1}, {"book": 1, "from": "Geralt", "to": "Dennis", "width": 1}, {"book": 7, "from": "Geralt", "to": "Count", "width": 1}, {"book": 2, "from": "Geralt", "to": "Istredd", "width": 1}, {"book": 2, "from": "Geralt", "to": "Herbolth", "width": 1}, {"book": 5, "from": "Geralt", "to": "Seven", "width": 1}, {"book": 2, "from": "Geralt", "to": "Vespula", "width": 1}, {"book": 7, "from": "Geralt", "to": "Dandelion", "width": 1}, {"book": 7, "from": "Geralt", "to": "Gar", "width": 1}, {"book": 2, "from": "Geralt", "to": "Dudu", "width": 1}, {"book": 2, "from": "Geralt", "to": "Vimme", "width": 1}, {"book": 6, "from": "Geralt", "to": "Sword", "width": 1}, {"book": 2, "from": "Geralt", "to": "Agloval", "width": 1}, {"book": 2, "from": "Geralt", "to": "Teleri", "width": 1}, {"book": 2, "from": "Geralt", "to": "Essi", "width": 1}, {"book": 2, "from": "Geralt", "to": "Duke", "width": 1}, {"book": 2, "from": "Geralt", "to": "Zelest", "width": 1}, {"book": 2, "from": "Geralt", "to": "Braenn", "width": 1}, {"book": 2, "from": "Geralt", "to": "Freixenet", "width": 1}, {"book": 2, "from": "Geralt", "to": "Eithn\u00e9", "width": 1}, {"book": 7, "from": "Geralt", "to": "Ciri", "width": 1}, {"book": 4, "from": "Geralt", "to": "Venzlav", "width": 1}, {"book": 2, "from": "Geralt", "to": "Yurga", "width": 1}, {"book": 2, "from": "Geralt", "to": "Visenna", "width": 1}, {"book": 7, "from": "Geralt", "to": "Baron", "width": 1}, {"book": 4, "from": "Geralt", "to": "Rience", "width": 1}, {"book": 7, "from": "Geralt", "to": "Lambert", "width": 1}, {"book": 3, "from": "Geralt", "to": "Ori", "width": 1}, {"book": 3, "from": "Geralt", "to": "Vanielle", "width": 1}, {"book": 6, "from": "Geralt", "to": "Forest", "width": 1}, {"book": 7, "from": "Geralt", "to": "Yarpen", "width": 1}, {"book": 3, "from": "Geralt", "to": "Everett", "width": 1}, {"book": 4, "from": "Geralt", "to": "Philippa", "width": 1}, {"book": 3, "from": "Geralt", "to": "Shani", "width": 1}, {"book": 7, "from": "Geralt", "to": "Tissaia", "width": 1}, {"book": 7, "from": "Geralt", "to": "Jarre", "width": 1}, {"book": 6, "from": "Geralt", "to": "Codringher", "width": 1}, {"book": 4, "from": "Geralt", "to": "Akerspaark", "width": 1}, {"book": 6, "from": "Geralt", "to": "Ithlinne", "width": 1}, {"book": 7, "from": "Geralt", "to": "Sabrina", "width": 1}, {"book": 4, "from": "Geralt", "to": "Esterad", "width": 1}, {"book": 7, "from": "Geralt", "to": "Vilgefortz", "width": 1}, {"book": 7, "from": "Geralt", "to": "Francesca", "width": 1}, {"book": 4, "from": "Geralt", "to": "Marti", "width": 1}, {"book": 4, "from": "Geralt", "to": "Dorregaray", "width": 1}, {"book": 4, "from": "Geralt", "to": "Lydia", "width": 1}, {"book": 4, "from": "Geralt", "to": "Falka", "width": 1}, {"book": 4, "from": "Geralt", "to": "Artaud", "width": 1}, {"book": 7, "from": "Geralt", "to": "Keira", "width": 1}, {"book": 7, "from": "Geralt", "to": "Emhyr", "width": 1}, {"book": 4, "from": "Geralt", "to": "Fauve", "width": 1}, {"book": 4, "from": "Geralt", "to": "Menno", "width": 1}, {"book": 7, "from": "Geralt", "to": "Milva", "width": 1}, {"book": 7, "from": "Geralt", "to": "Maria", "width": 1}, {"book": 7, "from": "Geralt", "to": "Zoltan", "width": 1}, {"book": 5, "from": "Geralt", "to": "Figgis", "width": 1}, {"book": 5, "from": "Geralt", "to": "Percival", "width": 1}, {"book": 5, "from": "Geralt", "to": "Munro", "width": 1}, {"book": 5, "from": "Geralt", "to": "Field", "width": 1}, {"book": 7, "from": "Geralt", "to": "Cahir", "width": 1}, {"book": 7, "from": "Geralt", "to": "Emiel", "width": 1}, {"book": 5, "from": "Geralt", "to": "Kayleigh", "width": 1}, {"book": 5, "from": "Geralt", "to": "Aubry", "width": 1}, {"book": 7, "from": "Geralt", "to": "Fringilla", "width": 1}, {"book": 5, "from": "Geralt", "to": "Blue", "width": 1}, {"book": 5, "from": "Geralt", "to": "Ethain", "width": 1}, {"book": 5, "from": "Geralt", "to": "Dyffryn", "width": 1}, {"book": 6, "from": "Geralt", "to": "Meve", "width": 1}, {"book": 7, "from": "Geralt", "to": "Vysogota", "width": 1}, {"book": 6, "from": "Geralt", "to": "Golan", "width": 1}, {"book": 7, "from": "Geralt", "to": "Julia", "width": 1}, {"book": 7, "from": "Geralt", "to": "Anna", "width": 1}, {"book": 6, "from": "Geralt", "to": "Mistle", "width": 1}, {"book": 7, "from": "Geralt", "to": "Nimue", "width": 1}, {"book": 7, "from": "Geralt", "to": "Reynart", "width": 1}, {"book": 7, "from": "Geralt", "to": "Reynard", "width": 1}, {"book": 7, "from": "Geralt", "to": "Palmerin", "width": 1}, {"book": 7, "from": "Geralt", "to": "Jan", "width": 1}, {"book": 7, "from": "Geralt", "to": "Guy", "width": 1}, {"book": 7, "from": "Geralt", "to": "Auberon", "width": 1}, {"book": 7, "from": "Geralt", "to": "Kelpie", "width": 1}, {"book": 7, "from": "Geralt", "to": "Margarita", "width": 1}, {"book": 1, "from": "Foltest", "to": "Ostrit", "width": 1}, {"book": 1, "from": "Foltest", "to": "Adda", "width": 1}, {"book": 1, "from": "Foltest", "to": "Two", "width": 1}, {"book": 3, "from": "Foltest", "to": "Everett", "width": 1}, {"book": 7, "from": "Foltest", "to": "King", "width": 1}, {"book": 7, "from": "Foltest", "to": "Meve", "width": 1}, {"book": 7, "from": "Foltest", "to": "Henselt", "width": 1}, {"book": 7, "from": "Foltest", "to": "Emhyr", "width": 1}, {"book": 3, "from": "Foltest", "to": "Crach", "width": 1}, {"book": 5, "from": "Foltest", "to": "Vissegerd", "width": 1}, {"book": 7, "from": "Foltest", "to": "Calanthe", "width": 1}, {"book": 3, "from": "Foltest", "to": "Venzlav", "width": 1}, {"book": 3, "from": "Foltest", "to": "Pavetta", "width": 1}, {"book": 3, "from": "Foltest", "to": "Rience", "width": 1}, {"book": 4, "from": "Foltest", "to": "Aplegatt", "width": 1}, {"book": 7, "from": "Foltest", "to": "Demavend", "width": 1}, {"book": 4, "from": "Foltest", "to": "Codringher", "width": 1}, {"book": 4, "from": "Foltest", "to": "Ciri", "width": 1}, {"book": 4, "from": "Foltest", "to": "Molnar", "width": 1}, {"book": 4, "from": "Foltest", "to": "Sabrina", "width": 1}, {"book": 7, "from": "Foltest", "to": "Philippa", "width": 1}, {"book": 7, "from": "Foltest", "to": "Bronibor", "width": 1}, {"book": 4, "from": "Foltest", "to": "Filavandrel", "width": 1}, {"book": 5, "from": "Foltest", "to": "Count", "width": 1}, {"book": 5, "from": "Foltest", "to": "Daniel", "width": 1}, {"book": 6, "from": "Foltest", "to": "Esterad", "width": 1}, {"book": 7, "from": "Foltest", "to": "Aubry", "width": 1}, {"book": 7, "from": "Foltest", "to": "Adam", "width": 1}, {"book": 7, "from": "Foltest", "to": "Julia", "width": 1}, {"book": 7, "from": "Foltest", "to": "Shilard", "width": 1}, {"book": 4, "from": "Adda", "to": "Vattier", "width": 1}, {"book": 4, "from": "Adda", "to": "Ciri", "width": 1}, {"book": 6, "from": "Two", "to": "Yennefer", "width": 1}, {"book": 7, "from": "Two", "to": "Ciri", "width": 1}, {"book": 3, "from": "Two", "to": "Donimir", "width": 1}, {"book": 7, "from": "Two", "to": "Dandelion", "width": 1}, {"book": 3, "from": "Two", "to": "Triss", "width": 1}, {"book": 3, "from": "Two", "to": "Shani", "width": 1}, {"book": 3, "from": "Two", "to": "Rience", "width": 1}, {"book": 3, "from": "Two", "to": "Tissaia", "width": 1}, {"book": 3, "from": "Two", "to": "Artaud", "width": 1}, {"book": 3, "from": "Two", "to": "Lydia", "width": 1}, {"book": 4, "from": "Two", "to": "Fabio", "width": 1}, {"book": 4, "from": "Two", "to": "King", "width": 1}, {"book": 4, "from": "Two", "to": "Emhyr", "width": 1}, {"book": 4, "from": "Two", "to": "Blue", "width": 1}, {"book": 5, "from": "Two", "to": "Mistle", "width": 1}, {"book": 5, "from": "Two", "to": "Falka", "width": 1}, {"book": 5, "from": "Two", "to": "Field", "width": 1}, {"book": 5, "from": "Two", "to": "Zoltan", "width": 1}, {"book": 5, "from": "Two", "to": "Percival", "width": 1}, {"book": 5, "from": "Two", "to": "Fringilla", "width": 1}, {"book": 5, "from": "Two", "to": "Seven", "width": 1}, {"book": 5, "from": "Two", "to": "Connor", "width": 1}, {"book": 7, "from": "Two", "to": "Cahir", "width": 1}, {"book": 6, "from": "Two", "to": "Julia", "width": 1}, {"book": 6, "from": "Two", "to": "Baron", "width": 1}, {"book": 6, "from": "Two", "to": "Crach", "width": 1}, {"book": 6, "from": "Two", "to": "Sir", "width": 1}, {"book": 6, "from": "Two", "to": "Jan", "width": 1}, {"book": 7, "from": "Two", "to": "Nimue", "width": 1}, {"book": 7, "from": "Two", "to": "Reynart", "width": 1}, {"book": 7, "from": "Two", "to": "Roach", "width": 1}, {"book": 7, "from": "Two", "to": "Jarre", "width": 1}, {"book": 7, "from": "Two", "to": "Kelpie", "width": 1}, {"book": 7, "from": "Two", "to": "Barclay", "width": 1}, {"book": 7, "from": "Two", "to": "Lucienne", "width": 1}, {"book": 3, "from": "Yennefer", "to": "Nenneke", "width": 1}, {"book": 3, "from": "Yennefer", "to": "Iola", "width": 1}, {"book": 1, "from": "Yennefer", "to": "Errdil", "width": 1}, {"book": 1, "from": "Yennefer", "to": "Vratimir", "width": 1}, {"book": 1, "from": "Yennefer", "to": "Chireadan", "width": 1}, {"book": 2, "from": "Yennefer", "to": "Beau", "width": 1}, {"book": 1, "from": "Yennefer", "to": "Laurelnose", "width": 1}, {"book": 1, "from": "Yennefer", "to": "Neville", "width": 1}, {"book": 2, "from": "Yennefer", "to": "Istredd", "width": 1}, {"book": 7, "from": "Yennefer", "to": "Dandelion", "width": 1}, {"book": 3, "from": "Yennefer", "to": "Essi", "width": 1}, {"book": 2, "from": "Yennefer", "to": "Eithn\u00e9", "width": 1}, {"book": 2, "from": "Yennefer", "to": "Yurga", "width": 1}, {"book": 6, "from": "Yennefer", "to": "Rience", "width": 1}, {"book": 6, "from": "Yennefer", "to": "Calanthe", "width": 1}, {"book": 7, "from": "Yennefer", "to": "Ciri", "width": 1}, {"book": 7, "from": "Yennefer", "to": "Triss", "width": 1}, {"book": 3, "from": "Yennefer", "to": "Vanielle", "width": 1}, {"book": 4, "from": "Yennefer", "to": "Yarpen", "width": 1}, {"book": 7, "from": "Yennefer", "to": "Philippa", "width": 1}, {"book": 3, "from": "Yennefer", "to": "Shani", "width": 1}, {"book": 3, "from": "Yennefer", "to": "Aen", "width": 1}, {"book": 7, "from": "Yennefer", "to": "Tissaia", "width": 1}, {"book": 7, "from": "Yennefer", "to": "Vilgefortz", "width": 1}, {"book": 4, "from": "Yennefer", "to": "Lydia", "width": 1}, {"book": 5, "from": "Yennefer", "to": "Artaud", "width": 1}, {"book": 4, "from": "Yennefer", "to": "Jarre", "width": 1}, {"book": 3, "from": "Yennefer", "to": "Blue", "width": 1}, {"book": 3, "from": "Yennefer", "to": "Ithlinne", "width": 1}, {"book": 3, "from": "Yennefer", "to": "Sword", "width": 1}, {"book": 4, "from": "Yennefer", "to": "Aplegatt", "width": 1}, {"book": 4, "from": "Yennefer", "to": "Codringher", "width": 1}, {"book": 5, "from": "Yennefer", "to": "Gar", "width": 1}, {"book": 4, "from": "Yennefer", "to": "Molnar", "width": 1}, {"book": 7, "from": "Yennefer", "to": "Emhyr", "width": 1}, {"book": 4, "from": "Yennefer", "to": "Fifteen", "width": 1}, {"book": 4, "from": "Yennefer", "to": "Little", "width": 1}, {"book": 7, "from": "Yennefer", "to": "Fabio", "width": 1}, {"book": 4, "from": "Yennefer", "to": "Anna", "width": 1}, {"book": 7, "from": "Yennefer", "to": "Margarita", "width": 1}, {"book": 4, "from": "Yennefer", "to": "Rayla", "width": 1}, {"book": 7, "from": "Yennefer", "to": "Sabrina", "width": 1}, {"book": 4, "from": "Yennefer", "to": "Henselt", "width": 1}, {"book": 4, "from": "Yennefer", "to": "Dorregaray", "width": 1}, {"book": 7, "from": "Yennefer", "to": "Keira", "width": 1}, {"book": 7, "from": "Yennefer", "to": "Francesca", "width": 1}, {"book": 5, "from": "Yennefer", "to": "Ori", "width": 1}, {"book": 7, "from": "Yennefer", "to": "Milva", "width": 1}, {"book": 7, "from": "Yennefer", "to": "Fringilla", "width": 1}, {"book": 5, "from": "Yennefer", "to": "Assire", "width": 1}, {"book": 5, "from": "Yennefer", "to": "Falka", "width": 1}, {"book": 5, "from": "Yennefer", "to": "Adalia", "width": 1}, {"book": 5, "from": "Yennefer", "to": "Ida", "width": 1}, {"book": 6, "from": "Yennefer", "to": "Crach", "width": 1}, {"book": 7, "from": "Yennefer", "to": "Vysogota", "width": 1}, {"book": 6, "from": "Yennefer", "to": "Pavetta", "width": 1}, {"book": 6, "from": "Yennefer", "to": "Sigrdrifa", "width": 1}, {"book": 6, "from": "Yennefer", "to": "Hjalmar", "width": 1}, {"book": 7, "from": "Yennefer", "to": "Nimue", "width": 1}, {"book": 7, "from": "Yennefer", "to": "Jan", "width": 1}, {"book": 7, "from": "Yennefer", "to": "Stefan", "width": 1}, {"book": 7, "from": "Yennefer", "to": "Ardal", "width": 1}, {"book": 7, "from": "Yennefer", "to": "Joachim", "width": 1}, {"book": 7, "from": "Yennefer", "to": "Emiel", "width": 1}, {"book": 7, "from": "Yennefer", "to": "Leo", "width": 1}, {"book": 7, "from": "Yennefer", "to": "Kelpie", "width": 1}, {"book": 7, "from": "Yennefer", "to": "King", "width": 1}, {"book": 7, "from": "Yennefer", "to": "Alzur", "width": 1}, {"book": 7, "from": "Yennefer", "to": "Cahir", "width": 1}, {"book": 7, "from": "Yennefer", "to": "Zoltan", "width": 1}, {"book": 7, "from": "Nenneke", "to": "Iola", "width": 1}, {"book": 1, "from": "Nenneke", "to": "Hereward", "width": 1}, {"book": 1, "from": "Nenneke", "to": "Falwick", "width": 1}, {"book": 1, "from": "Nenneke", "to": "Count", "width": 1}, {"book": 7, "from": "Nenneke", "to": "Ciri", "width": 1}, {"book": 3, "from": "Nenneke", "to": "Beau", "width": 1}, {"book": 7, "from": "Nenneke", "to": "Jarre", "width": 1}, {"book": 3, "from": "Nenneke", "to": "Ithlinne", "width": 1}, {"book": 3, "from": "Nenneke", "to": "Sword", "width": 1}, {"book": 4, "from": "Nenneke", "to": "Fabio", "width": 1}, {"book": 4, "from": "Nenneke", "to": "Gar", "width": 1}, {"book": 7, "from": "Nenneke", "to": "Triss", "width": 1}, {"book": 6, "from": "Nenneke", "to": "Milo", "width": 1}, {"book": 7, "from": "Nenneke", "to": "Dennis", "width": 1}, {"book": 6, "from": "Iola", "to": "Ciri", "width": 1}, {"book": 3, "from": "Iola", "to": "Beau", "width": 1}, {"book": 3, "from": "Iola", "to": "Tissaia", "width": 1}, {"book": 7, "from": "Iola", "to": "Milo", "width": 1}, {"book": 7, "from": "Iola", "to": "Jarre", "width": 1}, {"book": 6, "from": "Iola", "to": "Triss", "width": 1}, {"book": 6, "from": "Iola", "to": "Kelpie", "width": 1}, {"book": 7, "from": "Iola", "to": "Marti", "width": 1}, {"book": 7, "from": "Iola", "to": "Shani", "width": 1}, {"book": 7, "from": "Iola", "to": "Menno", "width": 1}, {"book": 7, "from": "Iola", "to": "Yaevinn", "width": 1}, {"book": 7, "from": "Iola", "to": "Bronibor", "width": 1}, {"book": 1, "from": "Roach", "to": "Vereena", "width": 1}, {"book": 2, "from": "Roach", "to": "Yurga", "width": 1}, {"book": 7, "from": "Roach", "to": "Dandelion", "width": 1}, {"book": 3, "from": "Roach", "to": "Ciri", "width": 1}, {"book": 3, "from": "Roach", "to": "Eskel", "width": 1}, {"book": 6, "from": "Roach", "to": "Milva", "width": 1}, {"book": 5, "from": "Roach", "to": "Emiel", "width": 1}, {"book": 5, "from": "Roach", "to": "Cahir", "width": 1}, {"book": 7, "from": "Roach", "to": "Beau", "width": 1}, {"book": 7, "from": "Roach", "to": "Reynart", "width": 1}, {"book": 1, "from": "Nivellen", "to": "Vereena", "width": 1}, {"book": 6, "from": "Asse", "to": "Mistle", "width": 1}, {"book": 6, "from": "Asse", "to": "Kayleigh", "width": 1}, {"book": 5, "from": "Asse", "to": "Little", "width": 1}, {"book": 6, "from": "Asse", "to": "Ciri", "width": 1}, {"book": 6, "from": "Asse", "to": "Falka", "width": 1}, {"book": 6, "from": "Asse", "to": "Baron", "width": 1}, {"book": 6, "from": "Asse", "to": "Vysogota", "width": 1}, {"book": 6, "from": "Asse", "to": "Kelpie", "width": 1}, {"book": 1, "from": "Hereward", "to": "Falwick", "width": 1}, {"book": 4, "from": "Hereward", "to": "Demavend", "width": 1}, {"book": 4, "from": "Hereward", "to": "Emhyr", "width": 1}, {"book": 1, "from": "Falwick", "to": "Dennis", "width": 1}, {"book": 1, "from": "Falwick", "to": "Count", "width": 1}, {"book": 1, "from": "Caldemeyn", "to": "Tavik", "width": 1}, {"book": 1, "from": "Caldemeyn", "to": "Renfri", "width": 1}, {"book": 1, "from": "Caldemeyn", "to": "Audoen", "width": 1}, {"book": 1, "from": "Caldemeyn", "to": "Stregobor", "width": 1}, {"book": 1, "from": "Stregobor", "to": "Count", "width": 1}, {"book": 1, "from": "Stregobor", "to": "Fredefalk", "width": 1}, {"book": 1, "from": "Stregobor", "to": "Renfri", "width": 1}, {"book": 1, "from": "Stregobor", "to": "Audoen", "width": 1}, {"book": 1, "from": "Stregobor", "to": "Baron", "width": 1}, {"book": 1, "from": "Count", "to": "Dennis", "width": 1}, {"book": 7, "from": "Count", "to": "Ciri", "width": 1}, {"book": 7, "from": "Count", "to": "Dandelion", "width": 1}, {"book": 7, "from": "Count", "to": "Emhyr", "width": 1}, {"book": 7, "from": "Count", "to": "Daniel", "width": 1}, {"book": 5, "from": "Count", "to": "Vissegerd", "width": 1}, {"book": 5, "from": "Count", "to": "Sir", "width": 1}, {"book": 6, "from": "Count", "to": "Radovid", "width": 1}, {"book": 6, "from": "Count", "to": "Baron", "width": 1}, {"book": 7, "from": "Count", "to": "Stella", "width": 1}, {"book": 7, "from": "Count", "to": "Cahir", "width": 1}, {"book": 7, "from": "Count", "to": "Reynart", "width": 1}, {"book": 7, "from": "Count", "to": "Fringilla", "width": 1}, {"book": 7, "from": "Count", "to": "Morvran", "width": 1}, {"book": 7, "from": "Count", "to": "Ardal", "width": 1}, {"book": 7, "from": "Count", "to": "Joachim", "width": 1}, {"book": 7, "from": "Count", "to": "Vilgefortz", "width": 1}, {"book": 7, "from": "Count", "to": "Gar", "width": 1}, {"book": 7, "from": "Count", "to": "Marti", "width": 1}, {"book": 7, "from": "Count", "to": "Shani", "width": 1}, {"book": 7, "from": "Count", "to": "Kobus", "width": 1}, {"book": 7, "from": "Count", "to": "Stefan", "width": 1}, {"book": 7, "from": "Count", "to": "Vattier", "width": 1}, {"book": 7, "from": "Count", "to": "Beau", "width": 1}, {"book": 7, "from": "Count", "to": "Julia", "width": 1}, {"book": 1, "from": "Fredefalk", "to": "Renfri", "width": 1}, {"book": 1, "from": "Renfri", "to": "Civril", "width": 1}, {"book": 1, "from": "Renfri", "to": "Tavik", "width": 1}, {"book": 1, "from": "Renfri", "to": "Audoen", "width": 1}, {"book": 1, "from": "Nohorn", "to": "Tavik", "width": 1}, {"book": 1, "from": "Nohorn", "to": "Fifteen", "width": 1}, {"book": 1, "from": "Nohorn", "to": "Civril", "width": 1}, {"book": 1, "from": "Tavik", "to": "Civril", "width": 1}, {"book": 1, "from": "Tavik", "to": "Fifteen", "width": 1}, {"book": 1, "from": "Civril", "to": "Fifteen", "width": 1}, {"book": 1, "from": "Civril", "to": "Baron", "width": 1}, {"book": 1, "from": "Baron", "to": "Calanthe", "width": 1}, {"book": 7, "from": "Baron", "to": "Dandelion", "width": 1}, {"book": 3, "from": "Baron", "to": "Sheldon", "width": 1}, {"book": 4, "from": "Baron", "to": "Kayleigh", "width": 1}, {"book": 6, "from": "Baron", "to": "Ciri", "width": 1}, {"book": 5, "from": "Baron", "to": "Philippa", "width": 1}, {"book": 6, "from": "Baron", "to": "Falka", "width": 1}, {"book": 6, "from": "Baron", "to": "Vysogota", "width": 1}, {"book": 6, "from": "Baron", "to": "Kelpie", "width": 1}, {"book": 6, "from": "Baron", "to": "Windsor", "width": 1}, {"book": 6, "from": "Baron", "to": "Stavro", "width": 1}, {"book": 6, "from": "Baron", "to": "Julia", "width": 1}, {"book": 6, "from": "Baron", "to": "Beau", "width": 1}, {"book": 7, "from": "Baron", "to": "Anna", "width": 1}, {"book": 6, "from": "Baron", "to": "King", "width": 1}, {"book": 7, "from": "Baron", "to": "Palmerin", "width": 1}, {"book": 7, "from": "Baron", "to": "Milva", "width": 1}, {"book": 7, "from": "Baron", "to": "Fringilla", "width": 1}, {"book": 7, "from": "Baron", "to": "Seven", "width": 1}, {"book": 7, "from": "Baron", "to": "Cahir", "width": 1}, {"book": 7, "from": "Baron", "to": "Puttkammer", "width": 1}, {"book": 7, "from": "Baron", "to": "Shilard", "width": 1}, {"book": 7, "from": "Baron", "to": "Ambassador", "width": 1}, {"book": 1, "from": "Haxo", "to": "Pavetta", "width": 1}, {"book": 1, "from": "Haxo", "to": "Calanthe", "width": 1}, {"book": 1, "from": "Haxo", "to": "Ravix", "width": 1}, {"book": 1, "from": "Haxo", "to": "Mousesack", "width": 1}, {"book": 7, "from": "Pavetta", "to": "Calanthe", "width": 1}, {"book": 4, "from": "Pavetta", "to": "Eist", "width": 1}, {"book": 1, "from": "Pavetta", "to": "Vissegerd", "width": 1}, {"book": 6, "from": "Pavetta", "to": "Crach", "width": 1}, {"book": 4, "from": "Pavetta", "to": "Roegner", "width": 1}, {"book": 1, "from": "Pavetta", "to": "Mousesack", "width": 1}, {"book": 1, "from": "Pavetta", "to": "Rainfarn", "width": 1}, {"book": 1, "from": "Pavetta", "to": "Windhalm", "width": 1}, {"book": 1, "from": "Pavetta", "to": "Draig", "width": 1}, {"book": 7, "from": "Pavetta", "to": "Ciri", "width": 1}, {"book": 3, "from": "Pavetta", "to": "Meve", "width": 1}, {"book": 4, "from": "Pavetta", "to": "Codringher", "width": 1}, {"book": 4, "from": "Pavetta", "to": "Akerspaark", "width": 1}, {"book": 4, "from": "Pavetta", "to": "Falka", "width": 1}, {"book": 4, "from": "Pavetta", "to": "Ithlinne", "width": 1}, {"book": 6, "from": "Pavetta", "to": "Hjalmar", "width": 1}, {"book": 7, "from": "Pavetta", "to": "Emhyr", "width": 1}, {"book": 7, "from": "Pavetta", "to": "Vilgefortz", "width": 1}, {"book": 7, "from": "Pavetta", "to": "Cyrus", "width": 1}, {"book": 7, "from": "Pavetta", "to": "Philippa", "width": 1}, {"book": 4, "from": "Calanthe", "to": "Eist", "width": 1}, {"book": 6, "from": "Calanthe", "to": "Crach", "width": 1}, {"book": 1, "from": "Calanthe", "to": "Draig", "width": 1}, {"book": 1, "from": "Calanthe", "to": "Drogodar", "width": 1}, {"book": 2, "from": "Calanthe", "to": "Mousesack", "width": 1}, {"book": 4, "from": "Calanthe", "to": "Roegner", "width": 1}, {"book": 1, "from": "Calanthe", "to": "Sir", "width": 1}, {"book": 1, "from": "Calanthe", "to": "Rumplestelt", "width": 1}, {"book": 1, "from": "Calanthe", "to": "Rainfarn", "width": 1}, {"book": 1, "from": "Calanthe", "to": "Windhalm", "width": 1}, {"book": 2, "from": "Calanthe", "to": "Eithn\u00e9", "width": 1}, {"book": 7, "from": "Calanthe", "to": "Ciri", "width": 1}, {"book": 5, "from": "Calanthe", "to": "Dandelion", "width": 1}, {"book": 4, "from": "Calanthe", "to": "Rience", "width": 1}, {"book": 3, "from": "Calanthe", "to": "Vissegerd", "width": 1}, {"book": 7, "from": "Calanthe", "to": "Meve", "width": 1}, {"book": 4, "from": "Calanthe", "to": "King", "width": 1}, {"book": 7, "from": "Calanthe", "to": "Emhyr", "width": 1}, {"book": 4, "from": "Calanthe", "to": "Codringher", "width": 1}, {"book": 4, "from": "Calanthe", "to": "Paulie", "width": 1}, {"book": 7, "from": "Calanthe", "to": "Vilgefortz", "width": 1}, {"book": 5, "from": "Calanthe", "to": "Daniel", "width": 1}, {"book": 5, "from": "Calanthe", "to": "Adalia", "width": 1}, {"book": 5, "from": "Calanthe", "to": "Margarita", "width": 1}, {"book": 5, "from": "Calanthe", "to": "Anna", "width": 1}, {"book": 6, "from": "Calanthe", "to": "Falka", "width": 1}, {"book": 6, "from": "Calanthe", "to": "Cahir", "width": 1}, {"book": 6, "from": "Calanthe", "to": "Radovid", "width": 1}, {"book": 6, "from": "Calanthe", "to": "Hjalmar", "width": 1}, {"book": 7, "from": "Calanthe", "to": "Cyrus", "width": 1}, {"book": 7, "from": "Calanthe", "to": "Triss", "width": 1}, {"book": 7, "from": "Calanthe", "to": "Zuleyka", "width": 1}, {"book": 7, "from": "Calanthe", "to": "Shilard", "width": 1}, {"book": 1, "from": "Rainfarn", "to": "Windhalm", "width": 1}, {"book": 1, "from": "Rainfarn", "to": "Draig", "width": 1}, {"book": 1, "from": "Rainfarn", "to": "Crach", "width": 1}, {"book": 1, "from": "Rainfarn", "to": "Eist", "width": 1}, {"book": 1, "from": "Rainfarn", "to": "Mousesack", "width": 1}, {"book": 1, "from": "Windhalm", "to": "Eist", "width": 1}, {"book": 3, "from": "Windhalm", "to": "Rience", "width": 1}, {"book": 3, "from": "Eist", "to": "Crach", "width": 1}, {"book": 1, "from": "Eist", "to": "Draig", "width": 1}, {"book": 1, "from": "Eist", "to": "Drogodar", "width": 1}, {"book": 1, "from": "Eist", "to": "Vissegerd", "width": 1}, {"book": 1, "from": "Eist", "to": "Mousesack", "width": 1}, {"book": 3, "from": "Eist", "to": "Ciri", "width": 1}, {"book": 1, "from": "Crach", "to": "Draig", "width": 1}, {"book": 1, "from": "Crach", "to": "Mousesack", "width": 1}, {"book": 1, "from": "Crach", "to": "Vissegerd", "width": 1}, {"book": 1, "from": "Crach", "to": "Drogodar", "width": 1}, {"book": 3, "from": "Crach", "to": "Henselt", "width": 1}, {"book": 3, "from": "Crach", "to": "Ethain", "width": 1}, {"book": 3, "from": "Crach", "to": "Emhyr", "width": 1}, {"book": 6, "from": "Crach", "to": "Ciri", "width": 1}, {"book": 6, "from": "Crach", "to": "Philippa", "width": 1}, {"book": 6, "from": "Crach", "to": "Sigrdrifa", "width": 1}, {"book": 6, "from": "Crach", "to": "Triss", "width": 1}, {"book": 6, "from": "Crach", "to": "Vilgefortz", "width": 1}, {"book": 6, "from": "Crach", "to": "Hjalmar", "width": 1}, {"book": 1, "from": "Draig", "to": "Mousesack", "width": 1}, {"book": 1, "from": "Drogodar", "to": "Vissegerd", "width": 1}, {"book": 3, "from": "Vissegerd", "to": "Vilgefortz", "width": 1}, {"book": 6, "from": "Vissegerd", "to": "Emhyr", "width": 1}, {"book": 6, "from": "Vissegerd", "to": "Meve", "width": 1}, {"book": 3, "from": "Vissegerd", "to": "Rience", "width": 1}, {"book": 3, "from": "Vissegerd", "to": "Henselt", "width": 1}, {"book": 4, "from": "Vissegerd", "to": "Forest", "width": 1}, {"book": 5, "from": "Vissegerd", "to": "Daniel", "width": 1}, {"book": 6, "from": "Vissegerd", "to": "Dandelion", "width": 1}, {"book": 5, "from": "Vissegerd", "to": "Sir", "width": 1}, {"book": 5, "from": "Vissegerd", "to": "Gar", "width": 1}, {"book": 5, "from": "Vissegerd", "to": "Cahir", "width": 1}, {"book": 6, "from": "Vissegerd", "to": "Ciri", "width": 1}, {"book": 7, "from": "Vissegerd", "to": "Zoltan", "width": 1}, {"book": 7, "from": "Vissegerd", "to": "Dennis", "width": 1}, {"book": 7, "from": "Vissegerd", "to": "Julia", "width": 1}, {"book": 2, "from": "Mousesack", "to": "Braenn", "width": 1}, {"book": 2, "from": "Mousesack", "to": "Ciri", "width": 1}, {"book": 2, "from": "Mousesack", "to": "Yurga", "width": 1}, {"book": 1, "from": "Roegner", "to": "Akerspaark", "width": 1}, {"book": 4, "from": "Roegner", "to": "Codringher", "width": 1}, {"book": 4, "from": "Roegner", "to": "Ciri", "width": 1}, {"book": 1, "from": "Sir", "to": "Rumplestelt", "width": 1}, {"book": 7, "from": "Sir", "to": "Seven", "width": 1}, {"book": 2, "from": "Sir", "to": "Herbolth", "width": 1}, {"book": 4, "from": "Sir", "to": "Ciri", "width": 1}, {"book": 2, "from": "Sir", "to": "Braenn", "width": 1}, {"book": 2, "from": "Sir", "to": "Freixenet", "width": 1}, {"book": 2, "from": "Sir", "to": "Yurga", "width": 1}, {"book": 7, "from": "Sir", "to": "Dandelion", "width": 1}, {"book": 3, "from": "Sir", "to": "Rience", "width": 1}, {"book": 4, "from": "Sir", "to": "Blue", "width": 1}, {"book": 5, "from": "Sir", "to": "Zoltan", "width": 1}, {"book": 5, "from": "Sir", "to": "Percival", "width": 1}, {"book": 5, "from": "Sir", "to": "Field", "width": 1}, {"book": 5, "from": "Sir", "to": "Aubry", "width": 1}, {"book": 5, "from": "Sir", "to": "Demavend", "width": 1}, {"book": 6, "from": "Sir", "to": "Vilgefortz", "width": 1}, {"book": 6, "from": "Sir", "to": "Ithlinne", "width": 1}, {"book": 7, "from": "Sir", "to": "Merlin", "width": 1}, {"book": 7, "from": "Sir", "to": "Arthur", "width": 1}, {"book": 7, "from": "Sir", "to": "Milva", "width": 1}, {"book": 7, "from": "Sir", "to": "Anna", "width": 1}, {"book": 7, "from": "Sir", "to": "Reynart", "width": 1}, {"book": 7, "from": "Sir", "to": "Julia", "width": 1}, {"book": 7, "from": "Sir", "to": "Cahir", "width": 1}, {"book": 7, "from": "Sir", "to": "Jarre", "width": 1}, {"book": 4, "from": "Akerspaark", "to": "Emhyr", "width": 1}, {"book": 4, "from": "Akerspaark", "to": "Horm", "width": 1}, {"book": 4, "from": "Akerspaark", "to": "Codringher", "width": 1}, {"book": 4, "from": "Akerspaark", "to": "Ciri", "width": 1}, {"book": 1, "from": "Nettly", "to": "Dhun", "width": 1}, {"book": 1, "from": "Nettly", "to": "Lille", "width": 1}, {"book": 1, "from": "Dhun", "to": "Lille", "width": 1}, {"book": 1, "from": "Lille", "to": "Filavandrel", "width": 1}, {"book": 1, "from": "Lille", "to": "Field", "width": 1}, {"book": 1, "from": "Lille", "to": "Toruviel", "width": 1}, {"book": 1, "from": "Lille", "to": "Torque", "width": 1}, {"book": 7, "from": "Little", "to": "Dandelion", "width": 1}, {"book": 2, "from": "Little", "to": "Sword", "width": 1}, {"book": 2, "from": "Little", "to": "Agloval", "width": 1}, {"book": 2, "from": "Little", "to": "Essi", "width": 1}, {"book": 3, "from": "Little", "to": "Shani", "width": 1}, {"book": 3, "from": "Little", "to": "Rience", "width": 1}, {"book": 4, "from": "Little", "to": "Aplegatt", "width": 1}, {"book": 4, "from": "Little", "to": "Molnar", "width": 1}, {"book": 7, "from": "Little", "to": "Ciri", "width": 1}, {"book": 5, "from": "Little", "to": "Falka", "width": 1}, {"book": 4, "from": "Little", "to": "Mistle", "width": 1}, {"book": 5, "from": "Little", "to": "Milva", "width": 1}, {"book": 5, "from": "Little", "to": "Aen", "width": 1}, {"book": 5, "from": "Little", "to": "Kayleigh", "width": 1}, {"book": 6, "from": "Little", "to": "Stavro", "width": 1}, {"book": 7, "from": "Little", "to": "Fringilla", "width": 1}, {"book": 7, "from": "Little", "to": "Ihuarraquax", "width": 1}, {"book": 7, "from": "Little", "to": "Gar", "width": 1}, {"book": 7, "from": "Little", "to": "Kelpie", "width": 1}, {"book": 7, "from": "Little", "to": "Seven", "width": 1}, {"book": 1, "from": "Torque", "to": "Galarr", "width": 1}, {"book": 1, "from": "Torque", "to": "Toruviel", "width": 1}, {"book": 1, "from": "Torque", "to": "Vanadain", "width": 1}, {"book": 1, "from": "Torque", "to": "Filavandrel", "width": 1}, {"book": 1, "from": "Torque", "to": "Field", "width": 1}, {"book": 1, "from": "Galarr", "to": "Toruviel", "width": 1}, {"book": 1, "from": "Galarr", "to": "Vanadain", "width": 1}, {"book": 1, "from": "Aen", "to": "Vanadain", "width": 1}, {"book": 1, "from": "Aen", "to": "Filavandrel", "width": 1}, {"book": 1, "from": "Aen", "to": "Toruviel", "width": 1}, {"book": 2, "from": "Aen", "to": "Braenn", "width": 1}, {"book": 3, "from": "Aen", "to": "Tissaia", "width": 1}, {"book": 7, "from": "Aen", "to": "Vilgefortz", "width": 1}, {"book": 6, "from": "Aen", "to": "Ithlinne", "width": 1}, {"book": 4, "from": "Aen", "to": "Codringher", "width": 1}, {"book": 4, "from": "Aen", "to": "Lydia", "width": 1}, {"book": 4, "from": "Aen", "to": "Emhyr", "width": 1}, {"book": 7, "from": "Aen", "to": "Ciri", "width": 1}, {"book": 4, "from": "Aen", "to": "Mistle", "width": 1}, {"book": 4, "from": "Aen", "to": "Rudiger", "width": 1}, {"book": 5, "from": "Aen", "to": "Milva", "width": 1}, {"book": 5, "from": "Aen", "to": "Dandelion", "width": 1}, {"book": 5, "from": "Aen", "to": "Philippa", "width": 1}, {"book": 5, "from": "Aen", "to": "Fringilla", "width": 1}, {"book": 5, "from": "Aen", "to": "Ida", "width": 1}, {"book": 5, "from": "Aen", "to": "Blue", "width": 1}, {"book": 7, "from": "Aen", "to": "Eredin", "width": 1}, {"book": 7, "from": "Aen", "to": "Auberon", "width": 1}, {"book": 7, "from": "Aen", "to": "King", "width": 1}, {"book": 7, "from": "Aen", "to": "Kelpie", "width": 1}, {"book": 1, "from": "Vanadain", "to": "Toruviel", "width": 1}, {"book": 1, "from": "Toruviel", "to": "Filavandrel", "width": 1}, {"book": 4, "from": "Toruviel", "to": "Gar", "width": 1}, {"book": 4, "from": "Toruviel", "to": "Yaevinn", "width": 1}, {"book": 4, "from": "Toruviel", "to": "Aplegatt", "width": 1}, {"book": 5, "from": "Toruviel", "to": "Milva", "width": 1}, {"book": 7, "from": "Toruviel", "to": "Lucienne", "width": 1}, {"book": 1, "from": "Filavandrel", "to": "Field", "width": 1}, {"book": 4, "from": "Filavandrel", "to": "Henselt", "width": 1}, {"book": 4, "from": "Filavandrel", "to": "Emhyr", "width": 1}, {"book": 5, "from": "Field", "to": "Milva", "width": 1}, {"book": 5, "from": "Field", "to": "Zoltan", "width": 1}, {"book": 7, "from": "Field", "to": "Percival", "width": 1}, {"book": 5, "from": "Field", "to": "Dandelion", "width": 1}, {"book": 7, "from": "Field", "to": "Puttkammer", "width": 1}, {"book": 7, "from": "Field", "to": "Jarre", "width": 1}, {"book": 7, "from": "Field", "to": "Menno", "width": 1}, {"book": 7, "from": "Field", "to": "Ramon", "width": 1}, {"book": 7, "from": "Field", "to": "Bronibor", "width": 1}, {"book": 7, "from": "Field", "to": "Sievers", "width": 1}, {"book": 7, "from": "Field", "to": "Munro", "width": 1}, {"book": 7, "from": "Field", "to": "Guy", "width": 1}, {"book": 7, "from": "Field", "to": "Yarpen", "width": 1}, {"book": 2, "from": "King", "to": "Yurga", "width": 1}, {"book": 7, "from": "King", "to": "Dandelion", "width": 1}, {"book": 5, "from": "King", "to": "Triss", "width": 1}, {"book": 7, "from": "King", "to": "Ciri", "width": 1}, {"book": 7, "from": "King", "to": "Yarpen", "width": 1}, {"book": 7, "from": "King", "to": "Henselt", "width": 1}, {"book": 4, "from": "King", "to": "Rience", "width": 1}, {"book": 7, "from": "King", "to": "Philippa", "width": 1}, {"book": 7, "from": "King", "to": "Meve", "width": 1}, {"book": 7, "from": "King", "to": "Jarre", "width": 1}, {"book": 4, "from": "King", "to": "Aplegatt", "width": 1}, {"book": 4, "from": "King", "to": "Codringher", "width": 1}, {"book": 7, "from": "King", "to": "Emhyr", "width": 1}, {"book": 4, "from": "King", "to": "Bran", "width": 1}, {"book": 4, "from": "King", "to": "Tissaia", "width": 1}, {"book": 7, "from": "King", "to": "Demavend", "width": 1}, {"book": 7, "from": "King", "to": "Francesca", "width": 1}, {"book": 7, "from": "King", "to": "Assire", "width": 1}, {"book": 7, "from": "King", "to": "Zoltan", "width": 1}, {"book": 5, "from": "King", "to": "Percival", "width": 1}, {"book": 5, "from": "King", "to": "Brouver", "width": 1}, {"book": 5, "from": "King", "to": "Albrich", "width": 1}, {"book": 6, "from": "King", "to": "Radovid", "width": 1}, {"book": 6, "from": "King", "to": "Esterad", "width": 1}, {"book": 6, "from": "King", "to": "Zuleyka", "width": 1}, {"book": 6, "from": "King", "to": "Blue", "width": 1}, {"book": 6, "from": "King", "to": "Lebioda", "width": 1}, {"book": 7, "from": "King", "to": "Nimue", "width": 1}, {"book": 7, "from": "King", "to": "Auberon", "width": 1}, {"book": 7, "from": "King", "to": "Kayleigh", "width": 1}, {"book": 7, "from": "King", "to": "Menno", "width": 1}, {"book": 7, "from": "King", "to": "Sword", "width": 1}, {"book": 7, "from": "King", "to": "Ardal", "width": 1}, {"book": 7, "from": "King", "to": "Shilard", "width": 1}, {"book": 7, "from": "King", "to": "Sabrina", "width": 1}, {"book": 7, "from": "King", "to": "Margarita", "width": 1}, {"book": 1, "from": "Chireadan", "to": "Errdil", "width": 1}, {"book": 1, "from": "Chireadan", "to": "Vratimir", "width": 1}, {"book": 1, "from": "Chireadan", "to": "Beau", "width": 1}, {"book": 1, "from": "Chireadan", "to": "Laurelnose", "width": 1}, {"book": 1, "from": "Chireadan", "to": "Neville", "width": 1}, {"book": 1, "from": "Errdil", "to": "Vratimir", "width": 1}, {"book": 1, "from": "Errdil", "to": "Eskel", "width": 1}, {"book": 1, "from": "Errdil", "to": "Vesemir", "width": 1}, {"book": 1, "from": "Errdil", "to": "Neville", "width": 1}, {"book": 1, "from": "Beau", "to": "Triss", "width": 1}, {"book": 2, "from": "Beau", "to": "Istredd", "width": 1}, {"book": 7, "from": "Beau", "to": "Ciri", "width": 1}, {"book": 4, "from": "Beau", "to": "Vilgefortz", "width": 1}, {"book": 7, "from": "Beau", "to": "Cahir", "width": 1}, {"book": 7, "from": "Beau", "to": "Anna", "width": 1}, {"book": 5, "from": "Beau", "to": "Francesca", "width": 1}, {"book": 7, "from": "Beau", "to": "Julia", "width": 1}, {"book": 7, "from": "Beau", "to": "Milva", "width": 1}, {"book": 7, "from": "Beau", "to": "Dandelion", "width": 1}, {"book": 7, "from": "Beau", "to": "Emhyr", "width": 1}, {"book": 7, "from": "Beau", "to": "Reynart", "width": 1}, {"book": 7, "from": "Beau", "to": "Fringilla", "width": 1}, {"book": 2, "from": "Triss", "to": "Yurga", "width": 1}, {"book": 7, "from": "Triss", "to": "Ciri", "width": 1}, {"book": 3, "from": "Triss", "to": "Lambert", "width": 1}, {"book": 3, "from": "Triss", "to": "Vesemir", "width": 1}, {"book": 3, "from": "Triss", "to": "Eskel", "width": 1}, {"book": 3, "from": "Triss", "to": "Vanielle", "width": 1}, {"book": 3, "from": "Triss", "to": "Forest", "width": 1}, {"book": 7, "from": "Triss", "to": "Yarpen", "width": 1}, {"book": 3, "from": "Triss", "to": "Paulie", "width": 1}, {"book": 7, "from": "Triss", "to": "Philippa", "width": 1}, {"book": 4, "from": "Triss", "to": "Esterad", "width": 1}, {"book": 5, "from": "Triss", "to": "Sabrina", "width": 1}, {"book": 4, "from": "Triss", "to": "Lydia", "width": 1}, {"book": 6, "from": "Triss", "to": "Vilgefortz", "width": 1}, {"book": 5, "from": "Triss", "to": "Keira", "width": 1}, {"book": 7, "from": "Triss", "to": "Tissaia", "width": 1}, {"book": 4, "from": "Triss", "to": "Gar", "width": 1}, {"book": 7, "from": "Triss", "to": "Dandelion", "width": 1}, {"book": 4, "from": "Triss", "to": "Venzlav", "width": 1}, {"book": 5, "from": "Triss", "to": "Ori", "width": 1}, {"book": 7, "from": "Triss", "to": "Francesca", "width": 1}, {"book": 7, "from": "Triss", "to": "Assire", "width": 1}, {"book": 7, "from": "Triss", "to": "Fringilla", "width": 1}, {"book": 5, "from": "Triss", "to": "Ida", "width": 1}, {"book": 5, "from": "Triss", "to": "Blue", "width": 1}, {"book": 5, "from": "Triss", "to": "Emhyr", "width": 1}, {"book": 7, "from": "Triss", "to": "Jarre", "width": 1}, {"book": 7, "from": "Triss", "to": "Margarita", "width": 1}, {"book": 7, "from": "Triss", "to": "Vattier", "width": 1}, {"book": 7, "from": "Triss", "to": "Kelpie", "width": 1}, {"book": 7, "from": "Triss", "to": "Alzur", "width": 1}, {"book": 7, "from": "Triss", "to": "Nimue", "width": 1}, {"book": 7, "from": "Triss", "to": "Cahir", "width": 1}, {"book": 7, "from": "Triss", "to": "Milva", "width": 1}, {"book": 7, "from": "Triss", "to": "Zoltan", "width": 1}, {"book": 7, "from": "Triss", "to": "Lytta", "width": 1}, {"book": 1, "from": "Laurelnose", "to": "Neville", "width": 1}, {"book": 7, "from": "Eskel", "to": "Vesemir", "width": 1}, {"book": 3, "from": "Eskel", "to": "Ciri", "width": 1}, {"book": 7, "from": "Eskel", "to": "Lambert", "width": 1}, {"book": 7, "from": "Vesemir", "to": "Ciri", "width": 1}, {"book": 7, "from": "Vesemir", "to": "Lambert", "width": 1}, {"book": 5, "from": "Vesemir", "to": "Dandelion", "width": 1}, {"book": 5, "from": "Vesemir", "to": "Cahir", "width": 1}, {"book": 5, "from": "Vesemir", "to": "Dyffryn", "width": 1}, {"book": 6, "from": "Vesemir", "to": "Zuleyka", "width": 1}, {"book": 6, "from": "Vesemir", "to": "Philippa", "width": 1}, {"book": 6, "from": "Vesemir", "to": "Sigrdrifa", "width": 1}, {"book": 6, "from": "Vesemir", "to": "Zyvik", "width": 1}, {"book": 7, "from": "Vesemir", "to": "Kelpie", "width": 1}, {"book": 7, "from": "Dennis", "to": "Jarre", "width": 1}, {"book": 7, "from": "Dennis", "to": "Zoltan", "width": 1}, {"book": 7, "from": "Dennis", "to": "Julia", "width": 1}, {"book": 7, "from": "Dennis", "to": "Yarpen", "width": 1}, {"book": 7, "from": "Dennis", "to": "Emhyr", "width": 1}, {"book": 7, "from": "Dennis", "to": "Ciri", "width": 1}, {"book": 2, "from": "Istredd", "to": "Herbolth", "width": 1}, {"book": 2, "from": "Herbolth", "to": "Seven", "width": 1}, {"book": 7, "from": "Seven", "to": "Ciri", "width": 1}, {"book": 5, "from": "Seven", "to": "Cahir", "width": 1}, {"book": 7, "from": "Seven", "to": "Milva", "width": 1}, {"book": 5, "from": "Seven", "to": "Dandelion", "width": 1}, {"book": 5, "from": "Seven", "to": "Connor", "width": 1}, {"book": 7, "from": "Seven", "to": "Kelpie", "width": 1}, {"book": 7, "from": "Seven", "to": "Puttkammer", "width": 1}, {"book": 7, "from": "Seven", "to": "Elan", "width": 1}, {"book": 7, "from": "Seven", "to": "Bronibor", "width": 1}, {"book": 7, "from": "Seven", "to": "Sievers", "width": 1}, {"book": 2, "from": "Vespula", "to": "Dandelion", "width": 1}, {"book": 5, "from": "Dandelion", "to": "Gar", "width": 1}, {"book": 2, "from": "Dandelion", "to": "Dudu", "width": 1}, {"book": 2, "from": "Dandelion", "to": "Vimme", "width": 1}, {"book": 2, "from": "Dandelion", "to": "Sword", "width": 1}, {"book": 2, "from": "Dandelion", "to": "Teleri", "width": 1}, {"book": 3, "from": "Dandelion", "to": "Essi", "width": 1}, {"book": 2, "from": "Dandelion", "to": "Agloval", "width": 1}, {"book": 2, "from": "Dandelion", "to": "Duke", "width": 1}, {"book": 2, "from": "Dandelion", "to": "Zelest", "width": 1}, {"book": 2, "from": "Dandelion", "to": "Veverka", "width": 1}, {"book": 2, "from": "Dandelion", "to": "Braenn", "width": 1}, {"book": 7, "from": "Dandelion", "to": "Ciri", "width": 1}, {"book": 3, "from": "Dandelion", "to": "Sheldon", "width": 1}, {"book": 3, "from": "Dandelion", "to": "Donimir", "width": 1}, {"book": 3, "from": "Dandelion", "to": "Rience", "width": 1}, {"book": 3, "from": "Dandelion", "to": "Everett", "width": 1}, {"book": 3, "from": "Dandelion", "to": "Shani", "width": 1}, {"book": 3, "from": "Dandelion", "to": "Ori", "width": 1}, {"book": 5, "from": "Dandelion", "to": "Philippa", "width": 1}, {"book": 3, "from": "Dandelion", "to": "Blue", "width": 1}, {"book": 4, "from": "Dandelion", "to": "Codringher", "width": 1}, {"book": 4, "from": "Dandelion", "to": "Falka", "width": 1}, {"book": 4, "from": "Dandelion", "to": "Venzlav", "width": 1}, {"book": 4, "from": "Dandelion", "to": "Fauve", "width": 1}, {"book": 4, "from": "Dandelion", "to": "Demavend", "width": 1}, {"book": 4, "from": "Dandelion", "to": "Menno", "width": 1}, {"book": 4, "from": "Dandelion", "to": "Vilgefortz", "width": 1}, {"book": 5, "from": "Dandelion", "to": "Emhyr", "width": 1}, {"book": 5, "from": "Dandelion", "to": "Riordain", "width": 1}, {"book": 7, "from": "Dandelion", "to": "Milva", "width": 1}, {"book": 7, "from": "Dandelion", "to": "Zoltan", "width": 1}, {"book": 5, "from": "Dandelion", "to": "Figgis", "width": 1}, {"book": 5, "from": "Dandelion", "to": "Percival", "width": 1}, {"book": 5, "from": "Dandelion", "to": "Munro", "width": 1}, {"book": 5, "from": "Dandelion", "to": "Aubry", "width": 1}, {"book": 5, "from": "Dandelion", "to": "Daniel", "width": 1}, {"book": 7, "from": "Dandelion", "to": "Cahir", "width": 1}, {"book": 5, "from": "Dandelion", "to": "Ethain", "width": 1}, {"book": 5, "from": "Dandelion", "to": "Dyffryn", "width": 1}, {"book": 7, "from": "Dandelion", "to": "Julia", "width": 1}, {"book": 7, "from": "Dandelion", "to": "Nimue", "width": 1}, {"book": 7, "from": "Dandelion", "to": "Jan", "width": 1}, {"book": 7, "from": "Dandelion", "to": "Anna", "width": 1}, {"book": 7, "from": "Dandelion", "to": "Reynart", "width": 1}, {"book": 7, "from": "Dandelion", "to": "Fringilla", "width": 1}, {"book": 7, "from": "Dandelion", "to": "Emiel", "width": 1}, {"book": 7, "from": "Dandelion", "to": "Kelpie", "width": 1}, {"book": 7, "from": "Dandelion", "to": "Meve", "width": 1}, {"book": 7, "from": "Dandelion", "to": "Eudora", "width": 1}, {"book": 7, "from": "Dandelion", "to": "Yarpen", "width": 1}, {"book": 7, "from": "Dandelion", "to": "Mistle", "width": 1}, {"book": 4, "from": "Gar", "to": "Aplegatt", "width": 1}, {"book": 4, "from": "Gar", "to": "Yaevinn", "width": 1}, {"book": 4, "from": "Gar", "to": "Fabio", "width": 1}, {"book": 7, "from": "Gar", "to": "Ciri", "width": 1}, {"book": 4, "from": "Gar", "to": "Philippa", "width": 1}, {"book": 4, "from": "Gar", "to": "Marti", "width": 1}, {"book": 4, "from": "Gar", "to": "Keira", "width": 1}, {"book": 4, "from": "Gar", "to": "Carduin", "width": 1}, {"book": 4, "from": "Gar", "to": "Tissaia", "width": 1}, {"book": 5, "from": "Gar", "to": "Francesca", "width": 1}, {"book": 4, "from": "Gar", "to": "Vilgefortz", "width": 1}, {"book": 4, "from": "Gar", "to": "Fauve", "width": 1}, {"book": 7, "from": "Gar", "to": "Eredin", "width": 1}, {"book": 2, "from": "Sword", "to": "Braenn", "width": 1}, {"book": 3, "from": "Sword", "to": "Ciri", "width": 1}, {"book": 3, "from": "Sword", "to": "Paulie", "width": 1}, {"book": 3, "from": "Sword", "to": "Rience", "width": 1}, {"book": 3, "from": "Sword", "to": "Ithlinne", "width": 1}, {"book": 7, "from": "Sword", "to": "Zoltan", "width": 1}, {"book": 2, "from": "Agloval", "to": "Essi", "width": 1}, {"book": 2, "from": "Agloval", "to": "Zelest", "width": 1}, {"book": 2, "from": "Agloval", "to": "Duke", "width": 1}, {"book": 2, "from": "Teleri", "to": "Essi", "width": 1}, {"book": 3, "from": "Essi", "to": "Blue", "width": 1}, {"book": 2, "from": "Duke", "to": "Zelest", "width": 1}, {"book": 6, "from": "Duke", "to": "Esterad", "width": 1}, {"book": 6, "from": "Duke", "to": "Zuleyka", "width": 1}, {"book": 6, "from": "Duke", "to": "Rience", "width": 1}, {"book": 6, "from": "Duke", "to": "Vattier", "width": 1}, {"book": 7, "from": "Duke", "to": "Emhyr", "width": 1}, {"book": 2, "from": "Braenn", "to": "Ciri", "width": 1}, {"book": 2, "from": "Braenn", "to": "Eithn\u00e9", "width": 1}, {"book": 2, "from": "Braenn", "to": "Freixenet", "width": 1}, {"book": 2, "from": "Freixenet", "to": "Ciri", "width": 1}, {"book": 2, "from": "Freixenet", "to": "Venzlav", "width": 1}, {"book": 2, "from": "Freixenet", "to": "Eithn\u00e9", "width": 1}, {"book": 2, "from": "Eithn\u00e9", "to": "Ciri", "width": 1}, {"book": 2, "from": "Eithn\u00e9", "to": "Venzlav", "width": 1}, {"book": 2, "from": "Ciri", "to": "Guy", "width": 1}, {"book": 2, "from": "Ciri", "to": "Yurga", "width": 1}, {"book": 6, "from": "Ciri", "to": "Rience", "width": 1}, {"book": 3, "from": "Ciri", "to": "Lambert", "width": 1}, {"book": 3, "from": "Ciri", "to": "Vanielle", "width": 1}, {"book": 3, "from": "Ciri", "to": "Ori", "width": 1}, {"book": 4, "from": "Ciri", "to": "Yarpen", "width": 1}, {"book": 3, "from": "Ciri", "to": "Yannick", "width": 1}, {"book": 4, "from": "Ciri", "to": "Henselt", "width": 1}, {"book": 3, "from": "Ciri", "to": "Aelirenn", "width": 1}, {"book": 3, "from": "Ciri", "to": "Regan", "width": 1}, {"book": 3, "from": "Ciri", "to": "Paulie", "width": 1}, {"book": 3, "from": "Ciri", "to": "Everett", "width": 1}, {"book": 7, "from": "Ciri", "to": "Philippa", "width": 1}, {"book": 3, "from": "Ciri", "to": "Shani", "width": 1}, {"book": 7, "from": "Ciri", "to": "Jarre", "width": 1}, {"book": 6, "from": "Ciri", "to": "Jan", "width": 1}, {"book": 4, "from": "Ciri", "to": "Blue", "width": 1}, {"book": 6, "from": "Ciri", "to": "Forest", "width": 1}, {"book": 3, "from": "Ciri", "to": "Ithlinne", "width": 1}, {"book": 4, "from": "Ciri", "to": "Aplegatt", "width": 1}, {"book": 4, "from": "Ciri", "to": "Codringher", "width": 1}, {"book": 4, "from": "Ciri", "to": "Molnar", "width": 1}, {"book": 4, "from": "Ciri", "to": "Fabio", "width": 1}, {"book": 7, "from": "Ciri", "to": "Tissaia", "width": 1}, {"book": 7, "from": "Ciri", "to": "Anna", "width": 1}, {"book": 4, "from": "Ciri", "to": "Rayla", "width": 1}, {"book": 7, "from": "Ciri", "to": "Margarita", "width": 1}, {"book": 4, "from": "Ciri", "to": "Yaevinn", "width": 1}, {"book": 4, "from": "Ciri", "to": "Bran", "width": 1}, {"book": 7, "from": "Ciri", "to": "Lydia", "width": 1}, {"book": 7, "from": "Ciri", "to": "Vilgefortz", "width": 1}, {"book": 7, "from": "Ciri", "to": "Emhyr", "width": 1}, {"book": 7, "from": "Ciri", "to": "Kayleigh", "width": 1}, {"book": 5, "from": "Ciri", "to": "Iskra", "width": 1}, {"book": 6, "from": "Ciri", "to": "Mistle", "width": 1}, {"book": 6, "from": "Ciri", "to": "Falka", "width": 1}, {"book": 7, "from": "Ciri", "to": "Milva", "width": 1}, {"book": 7, "from": "Ciri", "to": "Zoltan", "width": 1}, {"book": 7, "from": "Ciri", "to": "Cahir", "width": 1}, {"book": 7, "from": "Ciri", "to": "Fringilla", "width": 1}, {"book": 7, "from": "Ciri", "to": "Assire", "width": 1}, {"book": 7, "from": "Ciri", "to": "Francesca", "width": 1}, {"book": 5, "from": "Ciri", "to": "Keira", "width": 1}, {"book": 7, "from": "Ciri", "to": "Sabrina", "width": 1}, {"book": 7, "from": "Ciri", "to": "Ida", "width": 1}, {"book": 7, "from": "Ciri", "to": "Stefan", "width": 1}, {"book": 7, "from": "Ciri", "to": "Vysogota", "width": 1}, {"book": 7, "from": "Ciri", "to": "Kelpie", "width": 1}, {"book": 6, "from": "Ciri", "to": "Meve", "width": 1}, {"book": 7, "from": "Ciri", "to": "Leo", "width": 1}, {"book": 6, "from": "Ciri", "to": "Windsor", "width": 1}, {"book": 6, "from": "Ciri", "to": "Stavro", "width": 1}, {"book": 7, "from": "Ciri", "to": "Esterad", "width": 1}, {"book": 7, "from": "Ciri", "to": "Zuleyka", "width": 1}, {"book": 6, "from": "Ciri", "to": "Sigrdrifa", "width": 1}, {"book": 6, "from": "Ciri", "to": "Hjalmar", "width": 1}, {"book": 6, "from": "Ciri", "to": "Radovid", "width": 1}, {"book": 7, "from": "Ciri", "to": "Nimue", "width": 1}, {"book": 7, "from": "Ciri", "to": "Eredin", "width": 1}, {"book": 7, "from": "Ciri", "to": "Auberon", "width": 1}, {"book": 7, "from": "Ciri", "to": "Ihuarraquax", "width": 1}, {"book": 7, "from": "Ciri", "to": "Marti", "width": 1}, {"book": 7, "from": "Ciri", "to": "Emiel", "width": 1}, {"book": 7, "from": "Ciri", "to": "Shilard", "width": 1}, {"book": 7, "from": "Ciri", "to": "Julia", "width": 1}, {"book": 7, "from": "Ciri", "to": "Lytta", "width": 1}, {"book": 3, "from": "Venzlav", "to": "Ekkehard", "width": 1}, {"book": 7, "from": "Guy", "to": "Reynart", "width": 1}, {"book": 7, "from": "Guy", "to": "Zoltan", "width": 1}, {"book": 7, "from": "Guy", "to": "Munro", "width": 1}, {"book": 2, "from": "Yurga", "to": "Visenna", "width": 1}, {"book": 3, "from": "Sheldon", "to": "Donimir", "width": 1}, {"book": 7, "from": "Sheldon", "to": "Jarre", "width": 1}, {"book": 7, "from": "Sheldon", "to": "Zoltan", "width": 1}, {"book": 7, "from": "Sheldon", "to": "Menno", "width": 1}, {"book": 3, "from": "Rience", "to": "Philippa", "width": 1}, {"book": 6, "from": "Rience", "to": "Ori", "width": 1}, {"book": 3, "from": "Rience", "to": "Shani", "width": 1}, {"book": 4, "from": "Rience", "to": "Codringher", "width": 1}, {"book": 4, "from": "Rience", "to": "Sabrina", "width": 1}, {"book": 4, "from": "Rience", "to": "Henselt", "width": 1}, {"book": 6, "from": "Rience", "to": "Emhyr", "width": 1}, {"book": 6, "from": "Rience", "to": "Vilgefortz", "width": 1}, {"book": 5, "from": "Rience", "to": "Demavend", "width": 1}, {"book": 6, "from": "Rience", "to": "Cahir", "width": 1}, {"book": 5, "from": "Rience", "to": "Assire", "width": 1}, {"book": 6, "from": "Rience", "to": "Vattier", "width": 1}, {"book": 6, "from": "Rience", "to": "Ceallach", "width": 1}, {"book": 6, "from": "Rience", "to": "Meve", "width": 1}, {"book": 6, "from": "Rience", "to": "Stefan", "width": 1}, {"book": 6, "from": "Rience", "to": "Vysogota", "width": 1}, {"book": 6, "from": "Rience", "to": "Falka", "width": 1}, {"book": 5, "from": "Ori", "to": "Philippa", "width": 1}, {"book": 5, "from": "Ori", "to": "Milva", "width": 1}, {"book": 5, "from": "Ori", "to": "Artaud", "width": 1}, {"book": 5, "from": "Ori", "to": "Maria", "width": 1}, {"book": 5, "from": "Ori", "to": "Stefan", "width": 1}, {"book": 6, "from": "Ori", "to": "Falka", "width": 1}, {"book": 3, "from": "Forest", "to": "Jarre", "width": 1}, {"book": 5, "from": "Forest", "to": "Milva", "width": 1}, {"book": 6, "from": "Forest", "to": "Cahir", "width": 1}, {"book": 3, "from": "Yarpen", "to": "Xavier", "width": 1}, {"book": 3, "from": "Yarpen", "to": "Regan", "width": 1}, {"book": 3, "from": "Yarpen", "to": "Yannick", "width": 1}, {"book": 3, "from": "Yarpen", "to": "Paulie", "width": 1}, {"book": 3, "from": "Yarpen", "to": "Aelirenn", "width": 1}, {"book": 7, "from": "Yarpen", "to": "Julia", "width": 1}, {"book": 7, "from": "Yarpen", "to": "Emhyr", "width": 1}, {"book": 7, "from": "Yarpen", "to": "Zoltan", "width": 1}, {"book": 7, "from": "Yarpen", "to": "Eudora", "width": 1}, {"book": 3, "from": "Xavier", "to": "Regan", "width": 1}, {"book": 3, "from": "Xavier", "to": "Paulie", "width": 1}, {"book": 3, "from": "Regan", "to": "Yannick", "width": 1}, {"book": 7, "from": "Regan", "to": "Zoltan", "width": 1}, {"book": 3, "from": "Yannick", "to": "Paulie", "width": 1}, {"book": 4, "from": "Paulie", "to": "Vilgefortz", "width": 1}, {"book": 7, "from": "Henselt", "to": "Meve", "width": 1}, {"book": 4, "from": "Henselt", "to": "Ethain", "width": 1}, {"book": 6, "from": "Henselt", "to": "Emhyr", "width": 1}, {"book": 4, "from": "Henselt", "to": "Philippa", "width": 1}, {"book": 4, "from": "Henselt", "to": "Sabrina", "width": 1}, {"book": 4, "from": "Henselt", "to": "Marti", "width": 1}, {"book": 7, "from": "Henselt", "to": "Demavend", "width": 1}, {"book": 5, "from": "Henselt", "to": "Ida", "width": 1}, {"book": 5, "from": "Henselt", "to": "Francesca", "width": 1}, {"book": 7, "from": "Henselt", "to": "Shilard", "width": 1}, {"book": 7, "from": "Everett", "to": "Nimue", "width": 1}, {"book": 3, "from": "Shani", "to": "Philippa", "width": 1}, {"book": 7, "from": "Shani", "to": "Marti", "width": 1}, {"book": 4, "from": "Philippa", "to": "Codringher", "width": 1}, {"book": 7, "from": "Philippa", "to": "Emhyr", "width": 1}, {"book": 7, "from": "Philippa", "to": "Sabrina", "width": 1}, {"book": 4, "from": "Philippa", "to": "Carduin", "width": 1}, {"book": 4, "from": "Philippa", "to": "Dorregaray", "width": 1}, {"book": 7, "from": "Philippa", "to": "Keira", "width": 1}, {"book": 4, "from": "Philippa", "to": "Marti", "width": 1}, {"book": 4, "from": "Philippa", "to": "Tissaia", "width": 1}, {"book": 4, "from": "Philippa", "to": "Lydia", "width": 1}, {"book": 4, "from": "Philippa", "to": "Artaud", "width": 1}, {"book": 7, "from": "Philippa", "to": "Demavend", "width": 1}, {"book": 7, "from": "Philippa", "to": "Francesca", "width": 1}, {"book": 5, "from": "Philippa", "to": "Stefan", "width": 1}, {"book": 7, "from": "Philippa", "to": "Margarita", "width": 1}, {"book": 7, "from": "Philippa", "to": "Assire", "width": 1}, {"book": 5, "from": "Philippa", "to": "Sheala", "width": 1}, {"book": 5, "from": "Philippa", "to": "Zoltan", "width": 1}, {"book": 7, "from": "Philippa", "to": "Ida", "width": 1}, {"book": 5, "from": "Philippa", "to": "Ithlinne", "width": 1}, {"book": 7, "from": "Philippa", "to": "Fringilla", "width": 1}, {"book": 5, "from": "Philippa", "to": "Blue", "width": 1}, {"book": 5, "from": "Philippa", "to": "Falka", "width": 1}, {"book": 7, "from": "Philippa", "to": "Zuleyka", "width": 1}, {"book": 6, "from": "Philippa", "to": "Sigrdrifa", "width": 1}, {"book": 7, "from": "Philippa", "to": "Vilgefortz", "width": 1}, {"book": 7, "from": "Philippa", "to": "Radovid", "width": 1}, {"book": 7, "from": "Philippa", "to": "Sigismund", "width": 1}, {"book": 7, "from": "Philippa", "to": "Esterad", "width": 1}, {"book": 4, "from": "Meve", "to": "Emhyr", "width": 1}, {"book": 4, "from": "Meve", "to": "Aplegatt", "width": 1}, {"book": 7, "from": "Meve", "to": "Demavend", "width": 1}, {"book": 6, "from": "Meve", "to": "Milva", "width": 1}, {"book": 6, "from": "Meve", "to": "Ceallach", "width": 1}, {"book": 6, "from": "Meve", "to": "Cahir", "width": 1}, {"book": 7, "from": "Meve", "to": "Ardal", "width": 1}, {"book": 4, "from": "Ethain", "to": "Sabrina", "width": 1}, {"book": 5, "from": "Ethain", "to": "Cahir", "width": 1}, {"book": 3, "from": "Emhyr", "to": "Ithlinne", "width": 1}, {"book": 7, "from": "Emhyr", "to": "Vilgefortz", "width": 1}, {"book": 4, "from": "Emhyr", "to": "Aplegatt", "width": 1}, {"book": 7, "from": "Emhyr", "to": "Demavend", "width": 1}, {"book": 4, "from": "Emhyr", "to": "Codringher", "width": 1}, {"book": 7, "from": "Emhyr", "to": "Sabrina", "width": 1}, {"book": 5, "from": "Emhyr", "to": "Francesca", "width": 1}, {"book": 4, "from": "Emhyr", "to": "Tissaia", "width": 1}, {"book": 4, "from": "Emhyr", "to": "Artaud", "width": 1}, {"book": 4, "from": "Emhyr", "to": "Morvran", "width": 1}, {"book": 4, "from": "Emhyr", "to": "Jan", "width": 1}, {"book": 4, "from": "Emhyr", "to": "Bronibor", "width": 1}, {"book": 6, "from": "Emhyr", "to": "Esterad", "width": 1}, {"book": 7, "from": "Emhyr", "to": "Ardal", "width": 1}, {"book": 7, "from": "Emhyr", "to": "Vattier", "width": 1}, {"book": 7, "from": "Emhyr", "to": "Stefan", "width": 1}, {"book": 7, "from": "Emhyr", "to": "Xarthisius", "width": 1}, {"book": 6, "from": "Emhyr", "to": "Cahir", "width": 1}, {"book": 6, "from": "Emhyr", "to": "Kayleigh", "width": 1}, {"book": 5, "from": "Emhyr", "to": "Milva", "width": 1}, {"book": 6, "from": "Emhyr", "to": "Assire", "width": 1}, {"book": 7, "from": "Emhyr", "to": "Margarita", "width": 1}, {"book": 5, "from": "Emhyr", "to": "Sheala", "width": 1}, {"book": 5, "from": "Emhyr", "to": "Daniel", "width": 1}, {"book": 7, "from": "Emhyr", "to": "Stella", "width": 1}, {"book": 5, "from": "Emhyr", "to": "Fringilla", "width": 1}, {"book": 5, "from": "Emhyr", "to": "Keira", "width": 1}, {"book": 6, "from": "Emhyr", "to": "Mistle", "width": 1}, {"book": 6, "from": "Emhyr", "to": "Falka", "width": 1}, {"book": 6, "from": "Emhyr", "to": "Leo", "width": 1}, {"book": 6, "from": "Emhyr", "to": "Fergus", "width": 1}, {"book": 6, "from": "Emhyr", "to": "Lebioda", "width": 1}, {"book": 6, "from": "Emhyr", "to": "Zuleyka", "width": 1}, {"book": 7, "from": "Emhyr", "to": "Nimue", "width": 1}, {"book": 7, "from": "Emhyr", "to": "Joachim", "width": 1}, {"book": 7, "from": "Emhyr", "to": "Zoltan", "width": 1}, {"book": 7, "from": "Emhyr", "to": "Shilard", "width": 1}, {"book": 4, "from": "Ithlinne", "to": "Codringher", "width": 1}, {"book": 4, "from": "Ithlinne", "to": "Falka", "width": 1}, {"book": 5, "from": "Ithlinne", "to": "Margarita", "width": 1}, {"book": 5, "from": "Ithlinne", "to": "Sabrina", "width": 1}, {"book": 5, "from": "Ithlinne", "to": "Ida", "width": 1}, {"book": 5, "from": "Ithlinne", "to": "Francesca", "width": 1}, {"book": 6, "from": "Ithlinne", "to": "Esterad", "width": 1}, {"book": 6, "from": "Ithlinne", "to": "Vilgefortz", "width": 1}, {"book": 7, "from": "Ithlinne", "to": "Nimue", "width": 1}, {"book": 4, "from": "Vilgefortz", "to": "Artaud", "width": 1}, {"book": 5, "from": "Vilgefortz", "to": "Tissaia", "width": 1}, {"book": 4, "from": "Vilgefortz", "to": "Lydia", "width": 1}, {"book": 5, "from": "Vilgefortz", "to": "Francesca", "width": 1}, {"book": 4, "from": "Vilgefortz", "to": "Carduin", "width": 1}, {"book": 6, "from": "Vilgefortz", "to": "Codringher", "width": 1}, {"book": 4, "from": "Vilgefortz", "to": "Marti", "width": 1}, {"book": 4, "from": "Vilgefortz", "to": "Dorregaray", "width": 1}, {"book": 7, "from": "Vilgefortz", "to": "Keira", "width": 1}, {"book": 4, "from": "Vilgefortz", "to": "Esterad", "width": 1}, {"book": 7, "from": "Vilgefortz", "to": "Xarthisius", "width": 1}, {"book": 5, "from": "Vilgefortz", "to": "Demavend", "width": 1}, {"book": 5, "from": "Vilgefortz", "to": "Ida", "width": 1}, {"book": 5, "from": "Vilgefortz", "to": "Margarita", "width": 1}, {"book": 7, "from": "Vilgefortz", "to": "Sabrina", "width": 1}, {"book": 7, "from": "Vilgefortz", "to": "Vattier", "width": 1}, {"book": 6, "from": "Vilgefortz", "to": "Sigrdrifa", "width": 1}, {"book": 7, "from": "Vilgefortz", "to": "Ardal", "width": 1}, {"book": 7, "from": "Vilgefortz", "to": "Jan", "width": 1}, {"book": 7, "from": "Vilgefortz", "to": "Stefan", "width": 1}, {"book": 7, "from": "Vilgefortz", "to": "Joachim", "width": 1}, {"book": 7, "from": "Vilgefortz", "to": "Fringilla", "width": 1}, {"book": 7, "from": "Vilgefortz", "to": "Emiel", "width": 1}, {"book": 7, "from": "Vilgefortz", "to": "Leo", "width": 1}, {"book": 7, "from": "Vilgefortz", "to": "Braathens", "width": 1}, {"book": 4, "from": "Artaud", "to": "Tissaia", "width": 1}, {"book": 4, "from": "Artaud", "to": "Lydia", "width": 1}, {"book": 4, "from": "Artaud", "to": "Francesca", "width": 1}, {"book": 4, "from": "Artaud", "to": "Keira", "width": 1}, {"book": 4, "from": "Tissaia", "to": "Lydia", "width": 1}, {"book": 7, "from": "Tissaia", "to": "Margarita", "width": 1}, {"book": 7, "from": "Tissaia", "to": "Francesca", "width": 1}, {"book": 4, "from": "Tissaia", "to": "Leticia", "width": 1}, {"book": 4, "from": "Tissaia", "to": "Keira", "width": 1}, {"book": 4, "from": "Tissaia", "to": "Carduin", "width": 1}, {"book": 4, "from": "Tissaia", "to": "Sabrina", "width": 1}, {"book": 4, "from": "Tissaia", "to": "Demavend", "width": 1}, {"book": 5, "from": "Tissaia", "to": "Ida", "width": 1}, {"book": 4, "from": "Lydia", "to": "Leticia", "width": 1}, {"book": 4, "from": "Lydia", "to": "Falka", "width": 1}, {"book": 4, "from": "Lydia", "to": "Sabrina", "width": 1}, {"book": 7, "from": "Lydia", "to": "Nimue", "width": 1}, {"book": 4, "from": "Jarre", "to": "Molnar", "width": 1}, {"book": 7, "from": "Jarre", "to": "Milton", "width": 1}, {"book": 7, "from": "Jarre", "to": "Jan", "width": 1}, {"book": 7, "from": "Jarre", "to": "Zoltan", "width": 1}, {"book": 7, "from": "Jarre", "to": "Menno", "width": 1}, {"book": 7, "from": "Jarre", "to": "Anna", "width": 1}, {"book": 7, "from": "Jarre", "to": "Adam", "width": 1}, {"book": 7, "from": "Jarre", "to": "Bronibor", "width": 1}, {"book": 7, "from": "Jarre", "to": "Lucienne", "width": 1}, {"book": 4, "from": "Jan", "to": "Morvran", "width": 1}, {"book": 7, "from": "Jan", "to": "Nimue", "width": 1}, {"book": 7, "from": "Jan", "to": "Fringilla", "width": 1}, {"book": 5, "from": "Blue", "to": "Fringilla", "width": 1}, {"book": 5, "from": "Blue", "to": "Ida", "width": 1}, {"book": 5, "from": "Blue", "to": "Milva", "width": 1}, {"book": 5, "from": "Blue", "to": "Cahir", "width": 1}, {"book": 6, "from": "Blue", "to": "Esterad", "width": 1}, {"book": 4, "from": "Aplegatt", "to": "Demavend", "width": 1}, {"book": 7, "from": "Demavend", "to": "Sabrina", "width": 1}, {"book": 7, "from": "Demavend", "to": "Cyrus", "width": 1}, {"book": 7, "from": "Demavend", "to": "Shilard", "width": 1}, {"book": 7, "from": "Demavend", "to": "Assire", "width": 1}, {"book": 7, "from": "Demavend", "to": "Margarita", "width": 1}, {"book": 7, "from": "Demavend", "to": "Francesca", "width": 1}, {"book": 7, "from": "Demavend", "to": "Radovid", "width": 1}, {"book": 4, "from": "Codringher", "to": "Horm", "width": 1}, {"book": 4, "from": "Codringher", "to": "Falka", "width": 1}, {"book": 5, "from": "Codringher", "to": "Milva", "width": 1}, {"book": 7, "from": "Sabrina", "to": "Francesca", "width": 1}, {"book": 4, "from": "Sabrina", "to": "Marti", "width": 1}, {"book": 4, "from": "Sabrina", "to": "Dorregaray", "width": 1}, {"book": 7, "from": "Sabrina", "to": "Keira", "width": 1}, {"book": 4, "from": "Sabrina", "to": "Esterad", "width": 1}, {"book": 4, "from": "Sabrina", "to": "Carduin", "width": 1}, {"book": 5, "from": "Sabrina", "to": "Sheala", "width": 1}, {"book": 7, "from": "Sabrina", "to": "Assire", "width": 1}, {"book": 7, "from": "Sabrina", "to": "Margarita", "width": 1}, {"book": 7, "from": "Sabrina", "to": "Ida", "width": 1}, {"book": 7, "from": "Sabrina", "to": "Fringilla", "width": 1}, {"book": 5, "from": "Sabrina", "to": "Falka", "width": 1}, {"book": 5, "from": "Sabrina", "to": "Adalia", "width": 1}, {"book": 7, "from": "Sabrina", "to": "Shilard", "width": 1}, {"book": 4, "from": "Molnar", "to": "Fabio", "width": 1}, {"book": 5, "from": "Anna", "to": "Falka", "width": 1}, {"book": 5, "from": "Anna", "to": "Francesca", "width": 1}, {"book": 5, "from": "Anna", "to": "Adalia", "width": 1}, {"book": 5, "from": "Anna", "to": "Margarita", "width": 1}, {"book": 5, "from": "Anna", "to": "Assire", "width": 1}, {"book": 7, "from": "Anna", "to": "Reynart", "width": 1}, {"book": 7, "from": "Anna", "to": "Julia", "width": 1}, {"book": 7, "from": "Anna", "to": "Eredin", "width": 1}, {"book": 7, "from": "Margarita", "to": "Francesca", "width": 1}, {"book": 7, "from": "Margarita", "to": "Assire", "width": 1}, {"book": 5, "from": "Margarita", "to": "Sheala", "width": 1}, {"book": 5, "from": "Margarita", "to": "Ida", "width": 1}, {"book": 5, "from": "Margarita", "to": "Adalia", "width": 1}, {"book": 7, "from": "Margarita", "to": "Fringilla", "width": 1}, {"book": 4, "from": "Falka", "to": "Rayla", "width": 1}, {"book": 6, "from": "Falka", "to": "Mistle", "width": 1}, {"book": 6, "from": "Falka", "to": "Kayleigh", "width": 1}, {"book": 5, "from": "Falka", "to": "Francesca", "width": 1}, {"book": 5, "from": "Falka", "to": "Assire", "width": 1}, {"book": 6, "from": "Falka", "to": "Joanna", "width": 1}, {"book": 6, "from": "Falka", "to": "Leo", "width": 1}, {"book": 6, "from": "Falka", "to": "Windsor", "width": 1}, {"book": 6, "from": "Falka", "to": "Stavro", "width": 1}, {"book": 7, "from": "Rayla", "to": "Barclay", "width": 1}, {"book": 4, "from": "Esterad", "to": "Carduin", "width": 1}, {"book": 7, "from": "Esterad", "to": "Zuleyka", "width": 1}, {"book": 6, "from": "Esterad", "to": "Jacob", "width": 1}, {"book": 6, "from": "Esterad", "to": "Lebioda", "width": 1}, {"book": 4, "from": "Francesca", "to": "Marti", "width": 1}, {"book": 4, "from": "Francesca", "to": "Dorregaray", "width": 1}, {"book": 5, "from": "Francesca", "to": "Shilard", "width": 1}, {"book": 5, "from": "Francesca", "to": "Sheala", "width": 1}, {"book": 7, "from": "Francesca", "to": "Assire", "width": 1}, {"book": 5, "from": "Francesca", "to": "Keira", "width": 1}, {"book": 5, "from": "Francesca", "to": "Vattier", "width": 1}, {"book": 5, "from": "Francesca", "to": "Cahir", "width": 1}, {"book": 7, "from": "Francesca", "to": "Ida", "width": 1}, {"book": 5, "from": "Francesca", "to": "Adalia", "width": 1}, {"book": 7, "from": "Francesca", "to": "Fringilla", "width": 1}, {"book": 4, "from": "Carduin", "to": "Dorregaray", "width": 1}, {"book": 4, "from": "Carduin", "to": "Marti", "width": 1}, {"book": 4, "from": "Marti", "to": "Keira", "width": 1}, {"book": 4, "from": "Marti", "to": "Dorregaray", "width": 1}, {"book": 7, "from": "Marti", "to": "Julia", "width": 1}, {"book": 7, "from": "Marti", "to": "Daniel", "width": 1}, {"book": 7, "from": "Marti", "to": "Milo", "width": 1}, {"book": 5, "from": "Keira", "to": "Assire", "width": 1}, {"book": 7, "from": "Keira", "to": "Fringilla", "width": 1}, {"book": 5, "from": "Keira", "to": "Ida", "width": 1}, {"book": 4, "from": "Sigismund", "to": "Voymir", "width": 1}, {"book": 7, "from": "Bronibor", "to": "Adam", "width": 1}, {"book": 7, "from": "Bronibor", "to": "Barclay", "width": 1}, {"book": 7, "from": "Bronibor", "to": "Julia", "width": 1}, {"book": 6, "from": "Menno", "to": "Assire", "width": 1}, {"book": 7, "from": "Menno", "to": "Zoltan", "width": 1}, {"book": 7, "from": "Menno", "to": "Isengrim", "width": 1}, {"book": 7, "from": "Menno", "to": "Puttkammer", "width": 1}, {"book": 7, "from": "Menno", "to": "Sievers", "width": 1}, {"book": 7, "from": "Ardal", "to": "Joachim", "width": 1}, {"book": 7, "from": "Ardal", "to": "Stefan", "width": 1}, {"book": 7, "from": "Vattier", "to": "Stefan", "width": 1}, {"book": 6, "from": "Vattier", "to": "Ceallach", "width": 1}, {"book": 6, "from": "Vattier", "to": "Cahir", "width": 1}, {"book": 5, "from": "Vattier", "to": "Milva", "width": 1}, {"book": 5, "from": "Vattier", "to": "Ida", "width": 1}, {"book": 6, "from": "Vattier", "to": "Carthia", "width": 1}, {"book": 6, "from": "Vattier", "to": "Assire", "width": 1}, {"book": 5, "from": "Stefan", "to": "Milva", "width": 1}, {"book": 6, "from": "Stefan", "to": "Joanna", "width": 1}, {"book": 7, "from": "Stefan", "to": "Joachim", "width": 1}, {"book": 5, "from": "Xarthisius", "to": "Assire", "width": 1}, {"book": 5, "from": "Xarthisius", "to": "Fringilla", "width": 1}, {"book": 6, "from": "Ceallach", "to": "Cahir", "width": 1}, {"book": 7, "from": "Cahir", "to": "Zoltan", "width": 1}, {"book": 7, "from": "Cahir", "to": "Milva", "width": 1}, {"book": 5, "from": "Cahir", "to": "Assire", "width": 1}, {"book": 7, "from": "Cahir", "to": "Fringilla", "width": 1}, {"book": 5, "from": "Cahir", "to": "Mistle", "width": 1}, {"book": 5, "from": "Cahir", "to": "Dyffryn", "width": 1}, {"book": 7, "from": "Cahir", "to": "Reynart", "width": 1}, {"book": 7, "from": "Cahir", "to": "Aillil", "width": 1}, {"book": 5, "from": "Kayleigh", "to": "Iskra", "width": 1}, {"book": 6, "from": "Kayleigh", "to": "Mistle", "width": 1}, {"book": 4, "from": "Iskra", "to": "Mistle", "width": 1}, {"book": 4, "from": "Mistle", "to": "Rudiger", "width": 1}, {"book": 6, "from": "Mistle", "to": "Vysogota", "width": 1}, {"book": 7, "from": "Milva", "to": "Maria", "width": 1}, {"book": 7, "from": "Milva", "to": "Zoltan", "width": 1}, {"book": 5, "from": "Milva", "to": "Figgis", "width": 1}, {"book": 5, "from": "Milva", "to": "Percival", "width": 1}, {"book": 5, "from": "Milva", "to": "Munro", "width": 1}, {"book": 7, "from": "Milva", "to": "Fringilla", "width": 1}, {"book": 5, "from": "Milva", "to": "Assire", "width": 1}, {"book": 6, "from": "Milva", "to": "Emiel", "width": 1}, {"book": 7, "from": "Milva", "to": "Reynart", "width": 1}, {"book": 7, "from": "Milva", "to": "Lytta", "width": 1}, {"book": 5, "from": "Maria", "to": "Zoltan", "width": 1}, {"book": 7, "from": "Shilard", "to": "Cyrus", "width": 1}, {"book": 7, "from": "Shilard", "to": "Assire", "width": 1}, {"book": 7, "from": "Shilard", "to": "Ambassador", "width": 1}, {"book": 7, "from": "Shilard", "to": "Zuleyka", "width": 1}, {"book": 5, "from": "Assire", "to": "Sheala", "width": 1}, {"book": 7, "from": "Assire", "to": "Fringilla", "width": 1}, {"book": 5, "from": "Assire", "to": "Merlin", "width": 1}, {"book": 5, "from": "Assire", "to": "Albrich", "width": 1}, {"book": 5, "from": "Assire", "to": "Stella", "width": 1}, {"book": 7, "from": "Assire", "to": "Ida", "width": 1}, {"book": 5, "from": "Assire", "to": "Adalia", "width": 1}, {"book": 6, "from": "Assire", "to": "Carthia", "width": 1}, {"book": 7, "from": "Riordain", "to": "Isengrim", "width": 1}, {"book": 7, "from": "Zoltan", "to": "Percival", "width": 1}, {"book": 7, "from": "Zoltan", "to": "Munro", "width": 1}, {"book": 5, "from": "Zoltan", "to": "Figgis", "width": 1}, {"book": 5, "from": "Zoltan", "to": "Emiel", "width": 1}, {"book": 5, "from": "Zoltan", "to": "Brouver", "width": 1}, {"book": 7, "from": "Zoltan", "to": "Julia", "width": 1}, {"book": 7, "from": "Zoltan", "to": "Eudora", "width": 1}, {"book": 7, "from": "Zoltan", "to": "Lytta", "width": 1}, {"book": 5, "from": "Percival", "to": "Munro", "width": 1}, {"book": 5, "from": "Percival", "to": "Figgis", "width": 1}, {"book": 5, "from": "Percival", "to": "Emiel", "width": 1}, {"book": 5, "from": "Munro", "to": "Figgis", "width": 1}, {"book": 7, "from": "Aubry", "to": "Julia", "width": 1}, {"book": 7, "from": "Aubry", "to": "Barclay", "width": 1}, {"book": 5, "from": "Vreemde", "to": "Morteisen", "width": 1}, {"book": 5, "from": "Fringilla", "to": "Merlin", "width": 1}, {"book": 5, "from": "Fringilla", "to": "Ida", "width": 1}, {"book": 7, "from": "Fringilla", "to": "Fulko", "width": 1}, {"book": 7, "from": "Merlin", "to": "Arthur", "width": 1}, {"book": 6, "from": "Zuleyka", "to": "Lebioda", "width": 1}, {"book": 6, "from": "Zuleyka", "to": "Julia", "width": 1}, {"book": 6, "from": "Sigrdrifa", "to": "Zyvik", "width": 1}, {"book": 6, "from": "Vysogota", "to": "Kelpie", "width": 1}, {"book": 7, "from": "Vysogota", "to": "Eredin", "width": 1}, {"book": 7, "from": "Kelpie", "to": "Eredin", "width": 1}, {"book": 7, "from": "Kelpie", "to": "Ihuarraquax", "width": 1}, {"book": 6, "from": "Leo", "to": "Windsor", "width": 1}, {"book": 6, "from": "Windsor", "to": "Stavro", "width": 1}, {"book": 7, "from": "Julia", "to": "Reynart", "width": 1}, {"book": 7, "from": "Julia", "to": "Adam", "width": 1}, {"book": 6, "from": "Radovid", "to": "Hjalmar", "width": 1}, {"book": 7, "from": "Radovid", "to": "Cyrus", "width": 1}, {"book": 7, "from": "Eredin", "to": "Auberon", "width": 1}, {"book": 7, "from": "Adam", "to": "Barclay", "width": 1}]);
+
+                  nodeColors = {};
+                  allNodes = nodes.get({ returnType: "Object" });
+                  for (nodeId in allNodes) {
+                    nodeColors[nodeId] = allNodes[nodeId].color;
+                  }
+                  allEdges = edges.get({ returnType: "Object" });
+                  // adding nodes and edges to the graph
+                  data = {nodes: nodes, edges: edges};
+
+                  var options = {"configure": {"enabled": true}, "interaction": {"hover": true}, "nodes": {"borderWidth": 2, "borderWidthSelected": 4, "chosen": true, "color": {"highlight": {"border": "#FF4040", "background": "#EE3B3B"}, "hover": {"border": "#DEB887", "background": "#FFD39B"}}}, "edges": {"color": {"highlight": "#FF4040", "hover": "#DEB887"}}};
+
+                  
+
+
+                  
+                  // if this network requires displaying the configure window,
+                  // put it in its div
+                  options.configure["container"] = document.getElementById("config");
+                  
+
+                  network = new vis.Network(container, data, options);
+
+                  
+
+                  
+
+                  
+
+
+                  
+                      network.on("stabilizationProgress", function(params) {
+                          document.getElementById('loadingBar').removeAttribute("style");
+                          var maxWidth = 496;
+                          var minWidth = 20;
+                          var widthFactor = params.iterations/params.total;
+                          var width = Math.max(minWidth,maxWidth * widthFactor);
+                          document.getElementById('bar').style.width = width + 'px';
+                          document.getElementById('text').innerHTML = Math.round(widthFactor*100) + '%';
+                      });
+                      network.once("stabilizationIterationsDone", function() {
+                          document.getElementById('text').innerHTML = '100%';
+                          document.getElementById('bar').style.width = '496px';
+                          document.getElementById('loadingBar').style.opacity = 0;
+                          // really clean the dom element
+                          setTimeout(function () {document.getElementById('loadingBar').style.display = 'none';}, 500);
+                      });
+                  
+
+                  return network;
+
+              }
+              drawGraph();
+        </script>
+    </body>
+</html>

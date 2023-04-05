@@ -86,6 +86,27 @@ class Network:
         linked_nodes = node.all_linked_by_type(type_link)
         return self.__get_linked_content_from_nodes(linked_nodes)
 
+    def __recursive_linked(self, path: [str], finish: str) -> Optional[list]:
+        result = None
+        for next_nodes in self.all_linked(path[-1]):
+            if next_nodes in path:
+                continue
+
+            new_path = [*path, next_nodes]
+            if next_nodes == finish:
+                return new_path
+
+            next_path = self.__recursive_linked(new_path, finish)
+            if next_path and (not result or (len(result) > len(next_path))):
+                result = next_path
+                if len(result) == len(path) + 1:
+                    break
+
+        return None
+
+    def recursive_linked(self, source: str, target: str):
+        return self.__recursive_linked([source], target)
+
     class NetworkException(Exception):
         pass
 
